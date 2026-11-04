@@ -240,12 +240,12 @@ It runs on your machine, polls the repo for new issues and comments that mention
 CLI once per mention in a read-only checkout, and posts the answer back as a comment:
 
 ```bash
-# once: install the read-only Kiro agent (fs_read only, no shell, no writes, no MCP)
+# once: install the read-only Kiro agent (reads the working directory only, no shell, no writes, no MCP)
 mkdir -p ~/.kiro/agents && cp node_modules/archwhere/examples/kiro/archwhere-readonly.json ~/.kiro/agents/
 
 git clone --depth 1 https://github.com/you/repo ~/ro/repo   # a separate checkout just for reading
 npx archwhere bridge --repo you/repo --mention @kiro --cwd ~/ro/repo \
-  --cmd "kiro-cli chat --no-interactive --agent archwhere-readonly --trust-tools=fs_read"
+  --cmd "kiro-cli chat --no-interactive --agent archwhere-readonly"
 ```
 
 | Flag | Default | |
@@ -270,8 +270,12 @@ answer" note when the agent fails or times out.
   answered, and neither are the bridge's own replies (it spots them by the header). On a public repo
   this matters: anyone can comment, and the comment becomes the agent's prompt.
 - **Read-only.** Point `--cwd` at a separate checkout that nothing deploys from, and give the agent
-  read-only tools: the `archwhere-readonly` Kiro agent above exposes only `fs_read`, and
-  `--trust-tools=fs_read` pre-approves only that tool.
+  read-only tools: the `archwhere-readonly` Kiro agent above exposes only `read`, limited to
+  the working directory.
+- **Don't pre-approve the tool.** In `kiro-cli` 2.28, listing a tool in `allowedTools` or passing
+  `--trust-tools` skips its path limits, so the agent could read any file your user can, including
+  secrets elsewhere on the machine. Leave `allowedTools` empty: reads inside `allowedPaths` still go
+  through, and in `--no-interactive` mode anything else is refused. Check this on your own version.
 - **Never trust all tools.** The bridge refuses to start if `--cmd` contains `-a` or
   `--trust-all-tools`.
 - **No shell.** The command is split once and run with `execFile` and an argument array. The thread
