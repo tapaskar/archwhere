@@ -195,6 +195,32 @@ test('ATTACK: edit the workflow that runs these checks', () => {
   assert.match(c.out, /edits \.github\/workflows\/archwhere\.yml/);
 });
 
+test('a watch pattern fires on changed lines only, not on filenames or neighbouring lines', () => {
+  const r = repo();
+  r.write('features/billing/refund.js', 'const a = 1;\nconst b = 2;\nconst c = 3;\n');
+  r.g('add', '-A'); r.g('commit', '-qm', 'more');
+  r.g('checkout', '-q', 'main'); r.g('merge', '-q', 'pr'); r.g('checkout', '-q', 'pr');
+  r.write('features/billing/refund.js', 'const a = 1;\nconst b = 20;\nconst c = 3;\n');
+  r.commit();
+  assert.strictEqual(r.check('--labels', '').code, 0, 'the path says refund, the changed line does not');
+  r.write('features/billing/refund.js', '// refund rule changed\nconst a = 1;\nconst b = 20;\nconst c = 3;\n');
+  r.commit();
+  assert.match(r.check('--labels', '').out, /Billing: money/);
+  r.write('features/billing/refund.js', 'const a = 1;\nconst b = 20;\nconst c = 3;\n');
+  r.commit();
+  r.g('checkout', '-q', 'main'); r.g('merge', '-q', 'pr'); r.g('checkout', '-q', 'pr');
+  r.write('features/billing/refund.js', '// refund\nconst a = 1;\nconst b = 20;\nconst c = 3;\n');
+  r.commit();
+  r.g('checkout', '-q', 'main'); r.g('merge', '-q', 'pr'); r.g('checkout', '-q', 'pr');
+  r.write('features/billing/refund.js', '// refund\nconst a = 10;\nconst b = 20;\nconst c = 3;\n');
+  r.commit();
+  assert.strictEqual(r.check('--labels', '').code, 0, 'a removed or added pattern line is what counts, not the line beside it');
+  r.g('checkout', '-q', 'main'); r.g('merge', '-q', 'pr'); r.g('checkout', '-q', 'pr');
+  r.write('features/billing/refund.js', 'const a = 10;\nconst b = 20;\nconst c = 3;\n');
+  r.commit();
+  assert.match(r.check('--labels', '').out, /Billing: money/, 'deleting a line that matches counts too');
+});
+
 test('a label accepts a weakening but never hides it', () => {
   const r = repo();
   r.editModel(m => { m.components.auth.kind = 'feature'; });

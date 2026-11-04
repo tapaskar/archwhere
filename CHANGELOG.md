@@ -56,6 +56,8 @@
   like an empty PR.
 - PRs with files off the map no longer show as ready, and the rail says when more than 20 PRs are open.
 - The component card showed `[object Object]` for watch patterns.
+- Watch patterns fired on filenames and unchanged neighbouring lines. They now read only the lines a
+  change adds or removes.
 - The README told you to run `npx archwhere`, which fails because the package isn't on npm.
 
 ## 1.0.0 — 2026-11-04

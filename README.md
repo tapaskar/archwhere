@@ -115,6 +115,30 @@ flowchart LR
   class docs docs
 ```
 
+## A PR can't quietly review itself out
+
+The map decides what gets reviewed, and a PR can edit the map. So with `enforce: true`,
+archwhere reads the model from the base commit and compares. The PR fails, and its comment says why, when it:
+
+| The PR | Example |
+|---|---|
+| removes or reclassifies a security component | `"kind": "security"` becomes `"feature"` in the PR that edits `core/auth/` |
+| removes or rewrites a `watch` pattern | `session\|token\|rbac` becomes `session` |
+| moves a file out of a zone with a glob | `web-app` gains `core/auth/session.js`, and the longest match wins |
+| moves the model file | `arch/architecture.json` is replaced by a looser `architecture.json` |
+| changes a security component or fires a `watch` pattern, with no `owner-review` label | judged by the base model too, so reclassifying doesn't help |
+| edits a workflow or `CODEOWNERS` with no `owner-review` label | these decide whether the check runs |
+
+Adding the `owner-review` label reruns the check and lets it pass. A weakening stays in the comment.
+Create the label once with `gh label create owner-review`; `init` doesn't create it.
+Run `archwhere check --base origin/main` locally for the same report without failing on the label.
+
+**What this doesn't do.** A label records that someone looked; it isn't an approval, and anyone with
+triage access can add one. A `pull_request` workflow also runs from the PR's own merge commit, so a PR
+can rewrite the workflow itself. Mission control flags that from outside CI, but only GitHub can stop
+it. For real enforcement, turn on branch protection: make this job a required check, require a review,
+and put `arch/` and `.github/` in `CODEOWNERS`.
+
 ## Talk to your agents on the diagram
 
 `npx archwhere mission` serves a local UI where the map is the conversation surface:
