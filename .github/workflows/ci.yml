@@ -1,6 +1,7 @@
 name: ci
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
 jobs:
@@ -13,6 +14,8 @@ jobs:
           node-version: 22
       - run: node --check bin/archwhere.js
       - run: npm test
+      - name: Check our own map
+        run: node bin/archwhere.js check
       - name: Self-check the example model
         run: cd examples/meridian && node ../../bin/archwhere.js check || true
   selfmap:
@@ -26,3 +29,5 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./
+        with:
+          enforce: true

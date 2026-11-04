@@ -6,6 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const W = require('../lib/where');
+const Guard = require('../lib/guard');
 
 const USAGE = `
 archwhere — which architecture component does this change touch?
@@ -14,6 +15,8 @@ archwhere — which architecture component does this change touch?
   archwhere doc  [--out ARCHITECTURE.md]                         full map doc
   archwhere check [--fix]                                        model sanity (CI-friendly); --fix adopts unmapped files
   archwhere collide --refs a,b,c [--base main] [--json]              which branches in flight will fight each other
+  archwhere check --base REF [--labels a,b]                      also compare with REF: a weakened map, or security changes
+                                                                 without the owner-review label, fail (labels: env ARCHWHERE_PR_LABELS)
   archwhere heat [--days 30]                                     change heat per component from git history
   archwhere ir   [--out arch/build]                              Archify IR diagrams
   archwhere mission [--port 4610]                                mission-control UI
@@ -94,10 +97,39 @@ function main() {
     }
     for (const [fid, f] of Object.entries(arch.flows || {})) {
       for (const s of f.steps || []) {
-        if (!arch.components[s.from] || !arch.components[s.to]) errors.push(`flow ${fid}: unknown component in step`);
+        for (const end of [s.from, s.to]) if (!arch.components[end]) errors.push(`flow ${fid}: step names "${end}", which is not a component`);
         if (!s.label) errors.push(`flow ${fid}: step needs a label`);
       }
     }
+    for (const [i, lane] of (Array.isArray(arch.lanes) ? arch.lanes : []).entries()) {
+      for (const id of lane) if (!arch.components[id]) errors.push(`lane ${i + 1}: "${id}" is not a component`);
+    }
+    for (const [id, c] of Object.entries(arch.components)) {
+      for (const w of Array.isArray(c.watch) ? c.watch : []) {
+        try { new RegExp(w.pattern, 'i'); } catch { errors.push(`${id}: watch pattern "${w.pattern}" is not a valid regex`); }
+      }
+    }
+    const notes = [];
+    if (tracked.length) {
+      const { undeclaredDeps } = require('../lib/infer');
+      for (const d of undeclaredDeps(root, arch, tracked)) {
+        notes.push(`${d.from} imports ${d.to} (${d.count}×), but its deps don't declare it`);
+      }
+    }
+    const base = arg(args, '--base');
+    if (base) {
+      try {
+        const g = Guard.runGuard(root, base, archPath);
+        const labelArg = arg(args, '--labels');
+        const labels = Guard.parseLabels(labelArg !== null ? labelArg : process.env.ARCHWHERE_PR_LABELS);
+        const failures = Guard.gateFailures(g, labels);
+        const need = `add the "${Guard.REVIEW_LABEL}" label once the owner has looked`;
+        if (labels) for (const f of failures) errors.push(`${f} — ${need}`);
+        else for (const f of failures) notes.push(`${f} — a PR will need the "${Guard.REVIEW_LABEL}" label`);
+        if (!failures.length) for (const w of g.weakenings) notes.push(`weakens the map, accepted by the ${Guard.REVIEW_LABEL} label: ${w.message.replace(/\*\*|\`/g, '')}`);
+      } catch (e) { errors.push(`cannot compare with ${base}: ${e.message}`); }
+    }
+    for (const n of notes) console.error('! ' + n);
     if (errors.length) {
       for (const e of errors) console.error('✗ ' + e);
       if (tracked.length) {
@@ -191,11 +223,15 @@ function main() {
     return;
   }
   const res = W.mapFiles(arch, W.changedFiles(root, base));
-  const flags = W.collectFlags(arch, root, base, res.byComponent);
+  // With a base, flags come from both models: editing the map can't hide this very change.
+  let guard = null;
+  if (base) { try { guard = Guard.runGuard(root, base, archPath); } catch { /* no merge base: head model only */ } }
+  const flags = guard ? guard.flags : W.collectFlags(arch, root, base, res.byComponent);
+  const loud = guard ? guard.weakenings.map(w => 'weakens the map: ' + w.message) : [];
   if (format === 'mermaid') process.stdout.write(W.mermaid(arch, [...res.byComponent.keys()]) + '\n');
-  else if (format === 'md') process.stdout.write(W.renderMd(arch, res, flags) + '\n');
-  else if (format === 'html') process.stdout.write(W.renderHtml(arch, res, flags, { base }) + '\n');
-  else process.stdout.write(W.renderText(arch, res, flags) + '\n');
+  else if (format === 'md') process.stdout.write(W.renderMd(arch, res, flags, guard) + '\n');
+  else if (format === 'html') process.stdout.write(W.renderHtml(arch, res, [...loud, ...flags], { base }) + '\n');
+  else process.stdout.write(W.renderText(arch, res, [...loud, ...flags]) + '\n');
 }
 
 function bridge(root, args) {
@@ -279,8 +315,8 @@ Next — let your coding agent write the real model. Paste this to it:
   name, kind (core/security/feature/infra/product/ops/docs), description,
   the file globs it owns, deps, and watch patterns for review-sensitive code.
   Add 2–3 "flows" for the main user journeys. Every tracked file must map to
-  a component ("npx archwhere check" must pass). Then run
-  "npx archwhere doc --out ARCHITECTURE.md" and commit both.
+  a component ("npx github:tapaskar/archwhere check" must pass). Then run
+  "npx github:tapaskar/archwhere doc --out ARCHITECTURE.md" and commit both.
 `);
 }
 

@@ -25,7 +25,12 @@
   .comp { font-size:10px; border-radius:7px; padding:1px 7px; color:#fff; background:#595959; }
   .num { color:#2F4AC0; font-weight:600; font-size:11px; } .cc { font-size:10.5px; color:#6b7180; }
   .mbtn { background:#0F7A5C; color:#fff; font-size:11px; border-radius:7px; padding:3px 10px; font-weight:700; border:0; cursor:pointer; }
-  .mbtn.confirm { background:#C2410C; }
+  .mbtn.confirm, .mbtn.zoned { background:#C2410C; }
+  .why { margin-top:5px; font-size:10.5px; line-height:1.4; color:#595f6e; }
+  .why .over { color:#8a6d3b; } .why .age { color:#8A8A8A; }
+  .refused { font-size:11px; font-weight:600; color:#B42318; margin-top:4px; }
+  .refused:empty { display:none; }
+  .hidden-prs { font-size:11px; color:#8a6d3b; background:#FDF6E8; border-radius:7px; padding:6px 8px; margin-bottom:8px; }
   /* map */
   #map { flex:1; background:#fff; border:1px solid #DDD; border-radius:12px; padding:18px 18px 10px; overflow:auto; }
   .lane { border:1.5px dashed #C9C9C4; border-radius:10px; position:relative; margin:14px 0 26px; padding:22px 14px 18px; display:flex; gap:14px; flex-wrap:wrap; }
@@ -131,7 +136,16 @@ let MODEL = null, STATE = null, RUNTIME = null;
 let sel = { component: null, thread: null, pr: null, mode: null }; // mode: 'list' | 'issue' | 'pr' | 'new'
 const KINDC = { security: '#C2410C', product: '#0F7A5C', core: '#2F4AC0', feature: '#B45309', infra: '#595959', ops: '#7E3FA0', docs: '#8A8A8A' };
 
-async function j(url, opts) { const r = await fetch(url, opts); const d = await r.json(); if (!r.ok || d.error) throw new Error(d.error || r.status); return d; }
+// Everything from GitHub or the model goes through this before innerHTML: anyone can title a PR on a public repo.
+const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+
+async function j(url, opts) {
+  const o = opts && opts.body ? { ...opts, headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) } } : opts;
+  const r = await fetch(url, o);
+  const d = await r.json();
+  if (!r.ok || d.error) throw Object.assign(new Error(d.error || r.status), { data: d });
+  return d;
+}
 
 function lens() { return document.body.dataset.lens; }
 document.querySelectorAll('.lens button').forEach(b => b.onclick = () => {
@@ -232,13 +246,13 @@ function renderMap() {
   const box = $('#lanes'); box.innerHTML = '';
   (MODEL.lanes.length ? MODEL.lanes : [Object.keys(MODEL.components)]).forEach((lane, i) => {
     const el = document.createElement('div'); el.className = 'lane';
-    el.innerHTML = '<b>' + laneTitle(i) + '</b>';
+    el.innerHTML = '<b>' + esc(laneTitle(i)) + '</b>';
     for (const id of lane) {
       const c = MODEL.components[id]; if (!c) continue;
       const n = document.createElement('div');
       n.className = 'node k-' + c.kind; n.id = 'n-' + id;
-      const prov = c.provider ? '<span class="s" style="color:#8a6d3b">' + c.provider + '</span>' : '';
-      n.innerHTML = '<span class="t">' + c.name + '</span><span class="s">' + (c.sublabel || c.kind) + '</span>' + prov
+      const prov = c.provider ? '<span class="s" style="color:#8a6d3b">' + esc(c.provider) + '</span>' : '';
+      n.innerHTML = '<span class="t">' + esc(c.name) + '</span><span class="s">' + esc(c.sublabel || c.kind) + '</span>' + prov
         + '<span class="m"></span><span class="badge"></span><span class="alert"></span>';
       n.onclick = () => selectComponent(id);
       el.appendChild(n);
@@ -263,21 +277,56 @@ function renderBadges() {
   }
 }
 
+// Why an item sits here, and how old it is. Overlaps name the other open PRs on the same ground.
+function railWhy(it) {
+  const age = it.ageDays == null ? '' : 'opened ' + (it.ageDays ? it.ageDays + 'd ago' : 'today')
+    + (it.idleDays == null ? '' : ' · ' + (it.idleDays ? 'idle ' + it.idleDays + 'd' : 'active today'));
+  const over = (it.overlaps || []).slice(0, 3).map(o => 'overlaps PR #' + o.number
+    + (o.components.length ? ' on ' + o.components.join(', ') : '') + (o.files.length ? ' (' + o.files.length + ' shared file' + (o.files.length === 1 ? '' : 's') + ')' : ''));
+  return '<div class="why"><div>' + (it.reasons || []).map(esc).join(' · ') + '</div>'
+    + over.map(r => '<div class="over">' + esc(r) + '</div>').join('')
+    + (age ? '<div class="age">' + esc(age) + '</div>' : '') + '</div>';
+}
+
+// The server rechecks everything against GitHub at the click, pinned to the commit shown here.
+async function mergeFrom(it, mb, securityReasons) {
+  let confirmSecurity;
+  if (securityReasons) {
+    const typed = prompt('PR #' + it.number + ' needs an extra look:\n\n- ' + securityReasons.join('\n- ') + '\n\nType the PR number to merge it.');
+    if (typed === null) return;
+    if (typed.trim() !== String(it.number)) { mb.textContent = 'not confirmed'; return; }
+    confirmSecurity = it.number;
+  }
+  mb.disabled = true; mb.textContent = 'rechecking…';
+  try {
+    await j('/api/merge', { method: 'POST', body: JSON.stringify({ number: it.number, sha: it.sha, confirmSecurity }) });
+    mb.textContent = 'merged ✓';
+    refreshState();
+  } catch (err) {
+    const d = err.data || {};
+    if (d.code === 'confirm' && !securityReasons) { mb.disabled = false; return mergeFrom(it, mb, d.reasons); }
+    mb.textContent = 'not merged'; mb.title = String(err.message);
+    const box = mb.closest('.item').querySelector('.refused');
+    box.textContent = 'Not merged: ' + err.message;
+  }
+}
+
 function railItem(it, sec) {
   const d = document.createElement('div');
   d.className = 'item'; d.style.borderLeftColor = { security: '#C2410C', blocked: '#B45309', attention: '#2F4AC0', mergeable: '#0F7A5C' }[sec];
-  const comps = it.components.map(c => '<span class="comp" style="background:' + (KINDC[(MODEL.components[c] || {}).kind] || '#595959') + '">' + c + '</span>').join('');
-  const merge = sec === 'mergeable' ? '<button class="mbtn" data-pr="' + it.number + '">Merge</button>' : '';
-  d.innerHTML = it.title + '<div class="meta">' + comps + '<span class="num">' + (it.kind === 'pr' ? 'PR ' : '') + '#' + it.number + '</span>'
-    + '<span class="cc">💬 ' + (it.comments || 0) + '</span>' + merge + '</div>';
+  const comps = it.components.map(c => '<span class="comp" style="background:' + (KINDC[(MODEL.components[c] || {}).kind] || '#595959') + '">' + esc(c) + '</span>').join('');
+  const zoned = sec === 'security' && it.kind === 'pr' && it.canMerge;
+  const merge = sec === 'mergeable' ? '<button class="mbtn" data-pr="' + esc(it.number) + '">Merge</button>'
+    : zoned ? '<button class="mbtn zoned" data-pr="' + esc(it.number) + '">Merge…</button>' : '';
+  d.innerHTML = esc(it.title) + '<div class="meta">' + comps + '<span class="num">' + (it.kind === 'pr' ? 'PR ' : '') + '#' + esc(it.number) + '</span>'
+    + '<span class="cc">💬 ' + esc(it.comments || 0) + '</span>' + merge + '</div>' + railWhy(it) + '<div class="refused"></div>';
   d.onclick = e => { if (e.target.classList.contains('mbtn')) return; openItem(it); };
   const mb = d.querySelector('.mbtn');
   if (mb) mb.onclick = async e => {
     e.stopPropagation();
-    if (!mb.classList.contains('confirm')) { mb.classList.add('confirm'); mb.textContent = 'Confirm merge'; setTimeout(() => { mb.classList.remove('confirm'); mb.textContent = 'Merge'; }, 4000); return; }
-    mb.disabled = true; mb.textContent = 'merging…';
-    try { await j('/api/merge', { method: 'POST', body: JSON.stringify({ number: it.number }) }); mb.textContent = 'merged ✓'; refreshState(); }
-    catch (err) { mb.textContent = 'failed'; mb.title = String(err); }
+    if (zoned) return mergeFrom(it, mb, it.reasons);
+    if (!mb.classList.contains('confirm')) { mb.classList.add('confirm'); mb.textContent = 'Confirm merge'; setTimeout(() => { if (!mb.disabled) { mb.classList.remove('confirm'); mb.textContent = 'Merge'; } }, 4000); return; }
+    return mergeFrom(it, mb);
   };
   return d;
 }
@@ -293,13 +342,17 @@ function renderRail() {
     for (const it of items) rb.appendChild(railItem(it, sec));
   }
   if (!rb.children.length) rb.textContent = 'Nothing needs you. Rare — enjoy it.';
+  if (STATE.hiddenPrs) {
+    const more = document.createElement('div'); more.className = 'hidden-prs';
+    more.textContent = STATE.hiddenPrs + ' more open PR(s) not analysed: only the newest 20 are read. Check them on GitHub.';
+    rb.prepend(more);
+  }
 }
 
 // Details card for a component: what it is, its files, what it uses and what uses it, owner-review
 // zones, live health (Runtime lens data) and the flows that pass through it. All from the model.
 function componentDetails(id) {
   const c = MODEL.components[id];
-  const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const name = d => (MODEL.components[d] ? MODEL.components[d].name : d);
   const usedBy = Object.keys(MODEL.components).filter(k => (MODEL.components[k].deps || []).includes(id));
   const flows = Object.entries(MODEL.flows || {}).filter(([, f]) => JSON.stringify(f.steps || f).includes('"' + id + '"'));
@@ -314,7 +367,7 @@ function componentDetails(id) {
     + '<h4>Used by</h4>' + chips(usedBy)
     + '<h4>Flows through it</h4>' + (flows.length ? flows.map(([k, f]) => esc(f.name || f.title || k)).join(' · ') : '<span class="cc">none</span>')
     + '<h4>Files</h4>' + (c.paths || []).map(g => '<code>' + esc(g) + '</code>').join(' ')
-    + ((c.watch || []).length ? '<h4>Owner-review zones</h4>' + c.watch.map(g => '<code>' + esc(g) + '</code>').join(' ') : '');
+    + ((c.watch || []).length ? '<h4>Owner-review zones</h4>' + c.watch.map(g => '<code title="' + esc(g.note) + '">' + esc(g.pattern || g) + '</code>').join(' ') : '');
   el.querySelectorAll('.chip').forEach(ch => { ch.onclick = () => selectComponent(ch.dataset.c); });
   return el;
 }
@@ -332,12 +385,12 @@ function selectComponent(id) {
   const prs = STATE ? STATE.prs.filter(p => p.components.includes(id)) : [];
   for (const t of threads) {
     const r = document.createElement('div'); r.className = 'trow';
-    r.innerHTML = '💬 <b>#' + t.number + '</b> ' + t.title + ' <span class="cc">· ' + t.comments + ' replies</span>';
+    r.innerHTML = '💬 <b>#' + esc(t.number) + '</b> ' + esc(t.title) + ' <span class="cc">· ' + esc(t.comments) + ' replies</span>';
     r.onclick = () => openIssue(t.number); list.appendChild(r);
   }
   for (const p of prs) {
     const r = document.createElement('div'); r.className = 'trow';
-    r.innerHTML = '⇄ <b>PR #' + p.number + '</b> ' + p.title + ' <span class="cc">· checks ' + (p.checkRuns ? '' : '') + (p.draft ? 'draft' : '') + '</span>';
+    r.innerHTML = '⇄ <b>PR #' + esc(p.number) + '</b> ' + esc(p.title) + (p.draft ? ' <span class="cc">· draft</span>' : '');
     r.onclick = () => openItem({ kind: 'pr', ...p }); list.appendChild(r);
   }
   const nb = document.createElement('button'); nb.className = 'ghost'; nb.textContent = '+ New thread on ' + c.name;
@@ -387,12 +440,11 @@ async function openIssue(number, opts = {}) {
   if (opts.keep && sig === threadSig) return;
   threadSig = sig;
   if (!opts.keep) {
-    $('#pcrumb').innerHTML = 'Thread · <a href="' + t.url + '" target="_blank">#' + number + ' on GitHub</a>';
+    $('#pcrumb').innerHTML = 'Thread · <a href="' + esc(t.url) + '" target="_blank" rel="noopener">#' + esc(number) + ' on GitHub</a>';
     $('#ptitle').textContent = t.title;
   }
   $('#plist').style.display = 'none';
   const th = $('#thread'); th.style.display = 'flex'; th.innerHTML = '';
-  const esc = x => String(x == null ? '' : x).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
   const add = (user, at, body, mine, agent) => {
     const m = document.createElement('div'); m.className = 'msg ' + (mine && !agent ? 'me' : 'them');
     m.innerHTML = '<div class="who"><b>' + esc(user) + '</b>' + (agent ? '<span class="agent">' + esc(agent) + '</span>' : '')
@@ -411,8 +463,8 @@ async function openItem(it) {
   if (sel.component) document.querySelectorAll('.node').forEach(n => n.classList.toggle('sel', n.id === 'n-' + sel.component));
   await openIssue(it.number); // a PR's conversation is its issue thread (await: it sets the crumb too)
   sel.mode = 'pr';
-  $('#pcrumb').innerHTML = 'Pull request · <a href="' + (it.url || it.html_url || '#') + '" target="_blank">PR #' + it.number + '</a>'
-    + (it.branch ? ' · ' + it.branch : '');
+  $('#pcrumb').innerHTML = 'Pull request · <a href="' + esc(it.url || it.html_url || '#') + '" target="_blank" rel="noopener">PR #' + esc(it.number) + '</a>'
+    + (it.branch ? ' · ' + esc(it.branch) : '');
 }
 
 $('#csend').onclick = async () => {

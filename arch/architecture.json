@@ -17,7 +17,6 @@
       "description": "Model loading, glob mapping, renderers.",
       "paths": [
         "lib/where.js",
-        "bin/**",
         "lib/infer.js",
         "lib/collide.js"
       ],
@@ -26,13 +25,14 @@
     "rail": {
       "name": "Rail & BYOA logic",
       "kind": "core",
-      "description": "Attention-rail categorisation, runtime signal grading, agent mention. Pure: no network, no fs.",
+      "description": "Attention-rail categorisation, why each item sits where it does, runtime signal grading, agent mention. Pure: no network, no fs.",
       "paths": [
         "lib/rail.js",
         "lib/signals.js"
       ],
       "deps": [
-        "core"
+        "core",
+        "merge-gate"
       ]
     },
     "record": {
@@ -77,6 +77,7 @@
       ],
       "deps": [
         "core",
+        "merge-gate",
         "rail",
         "record"
       ],
@@ -139,6 +140,42 @@
         "docs/**"
       ],
       "deps": []
+    },
+    "merge-gate": {
+      "name": "Merge & review gate",
+      "kind": "security",
+      "description": "What stands between an agent's PR and main: the live recheck before a merge, and the comparison that catches a PR weakening the map.",
+      "paths": [
+        "lib/guard.js",
+        "lib/merge.js"
+      ],
+      "deps": [
+        "core",
+        "rail"
+      ],
+      "watch": [
+        {
+          "pattern": "mergeDecision|modelWeakenings|gateFailures|REVIEW_LABEL",
+          "note": "changes what a merge or a PR check is allowed to skip: owner review"
+        }
+      ]
+    },
+    "cli": {
+      "name": "CLI",
+      "kind": "product",
+      "description": "The archwhere command: dispatches to everything else.",
+      "paths": [
+        "bin/**"
+      ],
+      "deps": [
+        "archify",
+        "core",
+        "mcp",
+        "merge-gate",
+        "mission",
+        "rail",
+        "record"
+      ]
     }
   },
   "flows": {
@@ -223,6 +260,27 @@
           "from": "core",
           "to": "record",
           "label": "owner signs off from the CLI, never over MCP"
+        }
+      ]
+    },
+    "merge": {
+      "name": "Owner merges a PR",
+      "actor": "Owner at mission control",
+      "steps": [
+        {
+          "from": "mission",
+          "to": "merge-gate",
+          "label": "Merge clicked, with the commit shown"
+        },
+        {
+          "from": "merge-gate",
+          "to": "rail",
+          "label": "assess the live PR"
+        },
+        {
+          "from": "merge-gate",
+          "to": "mission",
+          "label": "merged at that commit, or why not"
         }
       ]
     }

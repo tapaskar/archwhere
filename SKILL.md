@@ -5,28 +5,38 @@ description: Maintain a declared architecture map and place every code change on
 
 # archwhere — the agent's side of the contract
 
+archwhere is not on npm. If the command is missing, use `npx github:tapaskar/archwhere` in its
+place, or install it with `npm install -g github:tapaskar/archwhere`.
+
 The humans supervising you read the architecture map, not your diffs. Your job
 is to keep the map honest and to place your work on it.
 
 ## Before coding
-Run `npx archwhere` (or `--base origin/main` on a branch) and state in one line
+Run `archwhere` (or `--base origin/main` on a branch) and state in one line
 which components the task touches and their kinds. If any is `security` or a
 `watch` pattern fires, follow the repo's review rules before proceeding.
 
 ## While coding
 - A change that **adds a module** must extend `arch/architecture.json` in the
-  same change (globs, and deps if they changed). `npx archwhere check` must pass.
+  same change (globs, and deps if they changed). `archwhere check` must pass.
 - A change to a **user-visible process** updates the matching entry in `flows`.
 - PR titles: `[component] kind: summary`.
-- Regenerate the doc when the model changed: `npx archwhere doc --out ARCHITECTURE.md`.
+- Regenerate the doc when the model changed: `archwhere doc --out ARCHITECTURE.md`.
+
+## What you must not do to the map
+- Never reclassify a `security` component, remove a `watch` pattern, or move a file out of a zone to
+  make a check pass. `archwhere check --base origin/main` compares your model with the base, and such
+  a change fails loudly. If the change is right, say so in the PR and leave it to the owner.
+- Never add the `owner-review` label yourself. It records that the owner has looked.
+- Never merge. Merging belongs to the owner.
 
 ## Scaffolding a repo that has no map
-Run `npx archwhere init`, then replace the starter with the real model:
+Run `archwhere init`, then replace the starter with the real model:
 10–20 **declared** components (judgment, not an import graph), each with name,
 kind (core/security/feature/infra/product/ops/docs), description, file globs
 (`**` crosses directories, `*` stays in one segment; longest match wins), deps,
 and `watch` regex patterns for review-sensitive code. Add 2–3 `flows` for the
-main user journeys. `npx archwhere check` must pass before you commit.
+main user journeys. `archwhere check` must pass before you commit.
 
 ## Answering threads
 Humans open issues labelled `component:<id>` from the mission-control map.
