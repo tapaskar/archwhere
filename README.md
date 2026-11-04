@@ -217,7 +217,7 @@ answer" note when the agent fails or times out.
 ## Give your agents the map over MCP
 
 ```bash
-claude mcp add --transport stdio archwhere -- npx -y archwhere mcp
+claude mcp add --transport stdio archwhere -- npx -y github:tapaskar/archwhere mcp
 ```
 
 `archwhere mcp` serves the map, what a file or diff touches, the attention rail, threads and the record to any MCP

@@ -58,19 +58,21 @@ that had them. An unsupported version gets `-32022`, as the specification says.
 ## Setup
 
 Read-only first. To write, add `--write --author NAME --agent NAME --model MODEL --vendor VENDOR` to the arguments.
-The examples use the published package; a checkout can use `node /path/to/bin/archwhere.js` instead of `npx`.
+The package isn't on the npm registry yet, so the examples run it from GitHub with `npx -y github:tapaskar/archwhere`.
+The first run downloads it, which can outlast a client's connect timeout: `node /path/to/archwhere/bin/archwhere.js mcp`
+from a checkout avoids that, and pins what you run.
 Each agent should have its own identity, or claims can't tell agents apart.
 
 ### Claude Code
 
 ```bash
-claude mcp add --transport stdio archwhere -- npx -y archwhere mcp
+claude mcp add --transport stdio archwhere -- npx -y github:tapaskar/archwhere mcp
 ```
 
 Or in `.mcp.json` at the repo root:
 
 ```json
-{ "mcpServers": { "archwhere": { "command": "npx", "args": ["-y", "archwhere", "mcp"] } } }
+{ "mcpServers": { "archwhere": { "command": "npx", "args": ["-y", "github:tapaskar/archwhere", "mcp"] } } }
 ```
 
 Tested: Claude Code 2.1.318 connected, listed the tools and called `get_map`, both on protocol 2026-07-28 and with
@@ -81,7 +83,7 @@ Tested: Claude Code 2.1.318 connected, listed the tools and called `get_map`, bo
 `.kiro/settings/mcp.json` in the workspace, or `~/.kiro/settings/mcp.json`:
 
 ```json
-{ "mcpServers": { "archwhere": { "command": "npx", "args": ["-y", "archwhere", "mcp"] } } }
+{ "mcpServers": { "archwhere": { "command": "npx", "args": ["-y", "github:tapaskar/archwhere", "mcp"] } } }
 ```
 
 Tested: kiro-cli 2.28.0 connected over the `initialize` handshake (protocol 2025-11-25) and called `get_map`. Tested from
@@ -96,12 +98,13 @@ is a different thing: it allows no MCP.
 mcp_servers:
   archwhere:
     command: npx
-    args: ["-y", "archwhere", "mcp", "--root", "/path/to/repo"]
+    args: ["-y", "github:tapaskar/archwhere", "mcp", "--root", "/path/to/repo"]
     env:
       GITHUB_TOKEN: "..."
 ```
 
-Format from the Hermes docs. Live test pending.
+Tested: Hermes 0.21.5 (`hermes mcp test`, with a temporary `HERMES_HOME` and a checkout path) connected over the `initialize`
+handshake (protocol 2025-11-25) and discovered the tools. It was not run with a model calling a tool.
 
 Hermes passes only configured `env` plus a safe baseline to a server, so give `GITHUB_TOKEN` there if you need the GitHub
 tools. Its working directory defaults to the session's or the Hermes process's, hence `--root`.
