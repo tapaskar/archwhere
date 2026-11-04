@@ -77,6 +77,11 @@
   #systemflow { display:none; }
   body[data-lens="flow"] #systemflow { display:block; }
   body[data-lens="flow"] #lanes { display:none; }
+  #recordview { display:none; padding:14px 18px; font-size:13px; }
+  body[data-lens="record"] #recordview { display:block; }
+  body[data-lens="record"] #lanes { display:none; }
+  #recordview .rec { border-bottom:1px solid #E4E4DF; padding:7px 0; }
+  #recordview .who { color:#6b7180; font-size:12px; }
   #systemflow h3 { font-size:13px; margin:0 0 6px; }
   #systemflow .note { font-size:12px; color:#6b7180; margin:0 0 8px; }
   #systemflow details { border:1.3px solid #E3E3DE; border-radius:8px; padding:9px 12px; margin-top:8px; font-size:13px; }
@@ -94,12 +99,13 @@
     <button data-l="heat">Heat 🔥</button>
     <button data-l="runtime">Runtime ●</button>
     <button data-l="flow">System flow</button>
+    <button data-l="record">Record</button>
   </div>
   <span id="meta">loading…</span>
 </header>
 <div class="wrap">
   <div id="rail"><h2>NEEDS YOUR ATTENTION</h2><div id="railbody">loading…</div></div>
-  <div id="map"><div id="rtnote"></div><div id="heatnote"></div><div id="lanes"></div><div id="systemflow"></div></div>
+  <div id="map"><div id="rtnote"></div><div id="heatnote"></div><div id="lanes"></div><div id="systemflow"></div><div id="recordview"></div></div>
   <div id="panel">
     <div class="phead"><div class="crumb" id="pcrumb">Select a component or a rail item</div><div class="title" id="ptitle">—</div></div>
     <div id="plist"></div>
@@ -126,8 +132,33 @@ document.querySelectorAll('.lens button').forEach(b => b.onclick = () => {
   document.body.dataset.lens = b.dataset.l;
   if (b.dataset.l === 'runtime') refreshRuntime();
   if (b.dataset.l === 'heat') refreshHeat();
+  if (b.dataset.l === 'record') showRecord().catch(e => { $('#recordview').textContent = 'Could not read the record: ' + e.message; });
   if (b.dataset.l === 'flow') showSystemFlow().catch(e => { $('#systemflow').textContent = 'Could not load the system flow: ' + e.message; });
 });
+
+// ---- Record lens: read-only. Record text comes from agents, so it only ever goes in as textContent.
+async function showRecord() {
+  const r = await j('/api/record');
+  const box = $('#recordview');
+  box.textContent = '';
+  const line = (text, cls, tag = 'div') => { const el = document.createElement(tag); el.textContent = text; if (cls) el.className = cls; box.appendChild(el); return el; };
+  line((r.ok ? '✓ the record verifies' : '✗ the record does NOT verify') + ` · ${r.count} entries · witness ${r.witness} · ${r.anchors} anchors checked`, '', 'b');
+  if (!r.anchors) line('Not anchored: a full rewrite of the record would not be noticed.', 'who');
+  for (const p of r.problems) line(p);
+  for (const w of r.warnings) line(w, 'who');
+  if (r.claims.length) line('Active claims', '', 'h3');
+  for (const c of r.claims) line(`${c.task} · ${c.role} · ${c.agent} (${c.vendor})${c.branch ? ' · ' + c.branch : ''} · until ${c.expires_at}`);
+  line('Latest entries', '', 'h3');
+  if (!r.latest.length) line('Nothing recorded yet.', 'who');
+  for (const e of r.latest) {
+    const row = document.createElement('div'); row.className = 'rec'; box.appendChild(row);
+    const a = document.createElement('div'); a.textContent = `${e.type}: ${e.title}`; row.appendChild(a);
+    const b = document.createElement('div'); b.className = 'who';
+    const signed = (e.signed_by || []).map(s => `${s.decision} signed by ${s.signer}`).join(', ');
+    b.textContent = `${e.ts} · ${e.made_by} · ${e.author} / ${e.agent} / ${e.model} / ${e.vendor} · ${e.hash.slice(0, 12)}${signed ? ' · ' + signed : ''}`;
+    row.appendChild(b);
+  }
+}
 
 // ---- System flow lens: the Mermaid system map and every process flow, drawn in the page.
 // The library is fetched only when this lens opens, pinned by hash.

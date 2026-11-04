@@ -49,6 +49,8 @@ npx archwhere check --fix        # adopt unmapped files into the nearest compone
 npx archwhere heat               # which components churned most in the last 30 days?
 npx archwhere doc --out ARCHITECTURE.md
 npx archwhere mission            # the UI at http://localhost:4610
+npx archwhere mcp                # MCP server on stdio; read-only unless --write
+npx archwhere record verify      # check the shared record's hash chain
 ```
 
 ## The map heals itself
@@ -120,7 +122,7 @@ flowchart LR
   PRs ready to merge (the Merge button uses *your* token; agents never merge).
 - **Click any component → open a thread.** Threads are GitHub issues labelled
   `component:<id>` (auto-created). Your agent answers; the reply appears on the map.
-- **Five lenses** — Structure / Changes / Heat / Runtime / System flow.
+- **Six lenses** — Structure / Changes / Heat / Runtime / System flow / Record.
   **Heat** colours components by git churn over the last 30 days — where your
   agents are actually spending effort. **Runtime** colours them by live health
   from any endpoint you point `RUNTIME_URL` at, returning
@@ -128,6 +130,7 @@ flowchart LR
   **System flow** draws the Mermaid system map, with components that have an open
   PR highlighted, and every process flow in your model as a sequence diagram.
   It fetches Mermaid 11 from jsDelivr when opened, pinned by hash.
+  **Record** shows, read-only, whether the [shared record](docs/RECORD.md) verifies, active claims and the latest entries.
 
 ### Bring your own coding agent
 
@@ -211,6 +214,49 @@ answer" note when the agent fails or times out.
 - **No pings.** `@handles` in the agent's answer are broken with a zero-width space, so an answer
   can't summon another agent or notify people.
 
+## Give your agents the map over MCP
+
+```bash
+claude mcp add --transport stdio archwhere -- npx -y archwhere mcp
+```
+
+`archwhere mcp` serves the map, what a file or diff touches, the attention rail, threads and the record to any MCP
+client. It is hand-written JSON-RPC over stdio with no dependencies. It speaks the current protocol (2026-07-28) and the
+older `initialize` handshake.
+
+It is **read-only by default**. With `--write` and a declared identity, agents can also store specs, findings and
+decisions, claim tasks, and ask the owner one question, which lands under Blocked. There is **no merge tool and no shell
+tool**, and agents can't sign off. Output from GitHub and the record is marked as untrusted data.
+
+Setup for Claude Code, Kiro and Hermes, the tool list and the safety rules: [docs/MCP.md](docs/MCP.md).
+
+## A shared, attributed record
+
+Agents forget, and GitHub threads don't say who decided what. `archwhere record` is an append-only log that every agent
+reads and writes, with each entry naming its author, agent, model and vendor:
+
+```bash
+archwhere record spec put ticket-sla --file specs/sla.md --components ticket-engine   # word for word, SHA-256, versioned
+archwhere task claim T-12 --role builder --branch feat/sla                            # atomic; one writer per branch
+archwhere record search holidays --component ticket-engine
+archwhere record independent --task T-12    # did a different vendor and model approve this? exit 0 or 1
+archwhere record signoff --target <hash> --decision approve --signer dana             # owner signature, from a terminal
+archwhere record verify                     # detects edits, deletions and reordering
+archwhere record anchor --tag --push        # keep the head hash somewhere else
+```
+
+Be clear about what this is:
+
+- **Tamper-evident, not tamper-proof.** Someone with disk access can rewrite the whole chain. Only an anchor kept
+  elsewhere exposes that, and deleting the newest entries breaks no link either.
+- **Vendor and model are self-declared.** The independent check confirms what was recorded, not what ran.
+- **A sign-off holds only while an agent can't get the key and its passphrase and can't change the trust list.**
+- **Claims are atomic on one filesystem and advisory.** Claims from separate clones can collide; that is reported on
+  import, not prevented.
+- **Not committed by default**, because it can hold sensitive text. In a public repo, committing it publishes it for good.
+
+Storage, concurrency, merge behaviour and every limit: [docs/RECORD.md](docs/RECORD.md).
+
 ## The model
 
 One file, declared judgment — not an auto-extracted import hairball:
@@ -257,6 +303,22 @@ agent skill, or paste it into your agent's instructions.
 | Structurizr / IcePanel | — | ✓ | — | — |
 | dependency graphs | ✓ | hairball | n/a | — |
 | **archwhere** | ✓ | ✓ | ✓ | ✓ |
+
+### Compared to OnMemory
+
+[OnMemory](https://onmemory.ai/#how) describes a similar loop: a spec kept verbatim, agents on several models writing to
+one memory, review by another vendor's model, and attributed sign-off. It is in closed test. We haven't used it, and what
+follows about it comes only from its public page.
+
+| | archwhere | OnMemory's page says |
+|---|---|---|
+| Spec kept word for word | SHA-256 addressed, versioned | keeps it verbatim |
+| Shared memory | Local append-only log, exportable, not hosted | all writing to one memory |
+| Cross-vendor review | Recorded and checked on declared data; archwhere doesn't run the reviewers | a different vendor's model reviews |
+| Provable history | Tamper-evident hash chain, with limits [spelled out](docs/RECORD.md#what-record-verify-proves) | history is provable |
+| Retrieval | Plain-text, component and task search | its own retrieval method; archwhere has no equivalent |
+
+archwhere is open source (MIT) and also puts the work on an architecture map.
 
 ## Onboarding at a glance
 

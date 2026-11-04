@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **`archwhere mcp`**: an MCP server on stdio, hand-written JSON-RPC with no dependencies. It serves protocol 2026-07-28
+  and the older `initialize` handshake. Read-only by default, with write tools only under `--write` and a declared
+  identity. There is no merge, shell or sign-off tool. Output is marked as untrusted data. See `docs/MCP.md`.
+- **`archwhere record`**: an append-only, hash-linked, attributed log of specs, decisions, findings, corrections,
+  reviews and owner sign-offs. One JSONL segment per clone under `.archwhere/record/`, not committed by default, with
+  full export and import. Tamper-evident, not tamper-proof. See `docs/RECORD.md`.
+- **Specs**: stored word for word, addressed by SHA-256, versioned by linking, and tied to components.
+- **`archwhere task`**: atomic claims with roles, expiry and one writer per branch, on one filesystem.
+- **`record independent`**: checks that a different vendor and model approved the work, using self-declared data.
+- **`record signoff`**: an Ed25519 owner sign-off, with a passphrase from the terminal only.
+- **`record anchor`**: publishes the head hash in a git tag or GitHub comment, and `record verify` checks it.
+- **Record lens** in mission control and `GET /api/record`, both read-only.
+
 ## 1.0.0 — 2026-11-04
 
 The first major release. The CLI commands, the `architecture.json` model and the GitHub Action

@@ -20,6 +20,10 @@ archwhere — which architecture component does this change touch?
                  [--repo o/r] [--name Kiro] [--allow a,b] [--interval 30] [--timeout 300]
                  [--state FILE] [--once]                         let a local CLI agent answer board threads
   archwhere init [--starter]                                     draft the model from your repo + write workflows; --starter copies the example model instead
+  archwhere record <command>                                     the shared attributed record: specs, decisions, findings, sign-offs (record help)
+  archwhere task <command>                                       claim, renew, release and check tasks (task help)
+  archwhere mcp [--write --author A --agent B --model M --vendor V] [--root DIR] [--repo o/r] [--record-dir DIR]
+                                                                 MCP server on stdio; read-only unless --write
 
 Common: --arch <path to architecture.json> · env ARCHWHERE_MODEL
 Mission env: GITHUB_TOKEN (or gh auth token) · AGENT_MENTIONS="Claude=@claude,Kiro=@kiro" (or AGENT_MENTION) · RUNTIME_URL/RUNTIME_BASIC
@@ -32,6 +36,9 @@ function main() {
   const cmd = args[0] && !args[0].startsWith('-') ? args.shift() : 'map';
   const root = process.cwd();
   const archPath = arg(args, '--arch');
+
+  if (cmd === 'record' || cmd === 'task') return require('../lib/record-cli').main(cmd, root, args);
+  if (cmd === 'mcp' && !args.includes('-h') && !args.includes('--help')) return require('../lib/mcp').cli(root, args);
 
   if (cmd === 'help' || args.includes('-h') || args.includes('--help')) {
     process.stdout.write(USAGE); return;

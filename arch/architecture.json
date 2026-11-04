@@ -33,6 +33,36 @@
         "core"
       ]
     },
+    "record": {
+      "name": "Attributed record",
+      "kind": "core",
+      "description": "Append-only hash-linked log: specs, decisions, findings, corrections, reviews, claims, owner sign-offs, independent-review check.",
+      "paths": [
+        "lib/record.js",
+        "lib/record-cli.js",
+        "lib/claims.js",
+        "lib/signoff.js",
+        "lib/review.js"
+      ],
+      "deps": [
+        "core"
+      ]
+    },
+    "mcp": {
+      "name": "MCP server",
+      "kind": "product",
+      "description": "archwhere mcp: hand-written JSON-RPC over stdio. Read-only unless --write. No merge or shell tool.",
+      "paths": [
+        "lib/mcp.js"
+      ],
+      "deps": [
+        "core",
+        "rail",
+        "record",
+        "mission"
+      ],
+      "provider": "MCP over stdio"
+    },
     "mission": {
       "name": "Mission control",
       "kind": "product",
@@ -45,7 +75,8 @@
       ],
       "deps": [
         "core",
-        "rail"
+        "rail",
+        "record"
       ],
       "provider": "Node http · localhost"
     },
@@ -142,6 +173,53 @@
           "from": "integrations",
           "to": "mission",
           "label": "agent reply lands on the map"
+        }
+      ]
+    },
+    "ask-owner": {
+      "name": "Agent asks the owner",
+      "actor": "An agent on MCP",
+      "steps": [
+        {
+          "from": "mcp",
+          "to": "mission",
+          "label": "ask_human opens a needs-owner issue"
+        },
+        {
+          "from": "mission",
+          "to": "rail",
+          "label": "shown under Blocked"
+        },
+        {
+          "from": "mcp",
+          "to": "record",
+          "label": "the question is recorded with its author"
+        }
+      ]
+    },
+    "claim-review-signoff": {
+      "name": "Claim, review, sign off",
+      "actor": "Agents and the owner",
+      "steps": [
+        {
+          "from": "mcp",
+          "to": "record",
+          "label": "agent claims a task under the lock"
+        },
+        {
+          "from": "record",
+          "to": "mcp",
+          "label": "a second claimant is refused"
+        },
+        {
+          "from": "mcp",
+          "to": "record",
+          "label": "another vendor records a review"
+        },
+        {
+          "from": "core",
+          "to": "record",
+          "label": "owner signs off from the CLI, never over MCP"
         }
       ]
     }
