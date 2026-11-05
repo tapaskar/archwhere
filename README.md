@@ -7,7 +7,7 @@ architecture map**: which component it touches, whether that component is a
 security zone, and what needs you *right now*. Then it goes further: the map
 becomes the place you **talk to your agents**.
 
-![mission control](docs/img/mission.png)
+![mission control](https://raw.githubusercontent.com/tapaskar/archwhere/main/docs/img/mission.png)
 
 *Mission control on a fictional product: the attention rail (security → blocked →
 needs-attention → ready-to-merge), the component map with live badges, and a
@@ -234,7 +234,7 @@ One file, declared judgment — not an auto-extracted import hairball:
 
 Kinds: `core · security · feature · infra · product · ops · docs`. `flows` are
 your C4-style dynamic views — the process layer above the components. The full
-example: [`examples/meridian/architecture.json`](examples/meridian/architecture.json).
+example: [`examples/meridian/architecture.json`](https://github.com/tapaskar/archwhere/blob/main/examples/meridian/architecture.json).
 
 ## Interactive diagrams (Archify)
 
@@ -261,7 +261,7 @@ agent skill, or paste it into your agent's instructions.
 ## Onboarding at a glance
 
 From stranger to agent-replies-on-the-map in under twenty minutes — the full
-funnel, stage by stage: [docs/ONBOARDING.md](docs/ONBOARDING.md).
+funnel, stage by stage: [docs/ONBOARDING.md](https://github.com/tapaskar/archwhere/blob/main/docs/ONBOARDING.md).
 
 ## License
 

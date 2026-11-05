@@ -42,7 +42,10 @@ function main() {
   if (cmd === 'mission') {
     const { makeServer } = require('../lib/mission');
     const port = parseInt(arg(args, '--port') || process.env.ARCHWHERE_PORT || '4610', 10);
-    const { server, owner, repo, token } = makeServer({ root, arch: archPath });
+    let made;
+    try { made = makeServer({ root, arch: archPath }); }
+    catch (e) { console.error(e.message); process.exit(2); }
+    const { server, owner, repo, token } = made;
     server.listen(port, '127.0.0.1', () => {
       console.log(`archwhere mission control: http://localhost:${port}   repo ${owner}/${repo}${token ? '' : '   (no GitHub token found)'}`);
     });
@@ -161,8 +164,8 @@ function bridge(root, args) {
   let owner, repo;
   if (a.repo) [owner, repo] = a.repo.split('/');
   else {
-    const { execFileSync } = require('child_process');
-    ({ owner, repo } = parseRepo(execFileSync('git', ['remote', 'get-url', 'origin'], { cwd, encoding: 'utf8' })));
+    try { ({ owner, repo } = G.originRepo(cwd, parseRepo)); }
+    catch (e) { console.error(e.message); process.exit(2); }
   }
   if (!owner || !repo) { console.error('--repo must look like owner/name'); process.exit(2); }
   const token = G.githubToken();
