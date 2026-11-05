@@ -89,3 +89,23 @@ test('the System flow lens loads Mermaid pinned by hash, in strict mode, only wh
   assert.doesNotMatch(html, /<script src=/, 'not loaded until the lens opens');
   assert.match(require('fs').readFileSync(path.join(__dirname, '..', 'lib', 'mission.js'), 'utf8'), /u\.pathname === '\/api\/system-flow'/);
 });
+
+// init() rewrites the tab title and the heading from the model, so a board branded only in the
+// static HTML showed the user's own system name and never "archwhere". Both must survive it.
+test('the board names archwhere, not only the system it is pointed at', () => {
+  const html = require('fs').readFileSync(path.join(__dirname, '..', 'ui', 'mission.html'), 'utf8');
+
+  assert.match(html, /document\.title = MODEL\.system \+ ' — archwhere mission control'/);
+
+  // The wordmark is a sibling of #htitle: anything inside it is destroyed by the textContent write.
+  const h1 = html.match(/<h1>[\s\S]*?<\/h1>/);
+  assert.ok(h1, 'header h1 present');
+  assert.match(h1[0], /<span id="htitle">/);
+  assert.match(h1[0], /<a class="brand"[^>]*>archwhere<\/a>/);
+  assert.doesNotMatch(h1[0], /<span id="htitle">[\s\S]*class="brand"[\s\S]*<\/span>/,
+    'the wordmark must not sit inside #htitle');
+
+  const sets = html.match(/\$?\(?'#htitle'\)?[^\n]*textContent\s*=\s*[^\n]*/g) || [];
+  assert.strictEqual(sets.length, 1, 'exactly one place writes the heading');
+  assert.doesNotMatch(sets[0], /archwhere/, 'the heading carries the system; the wordmark is static');
+});

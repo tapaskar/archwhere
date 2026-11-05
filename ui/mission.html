@@ -5,7 +5,12 @@
   * { box-sizing:border-box; margin:0; }
   body { font-family: system-ui, -apple-system, sans-serif; background:#F4F4F1; color:#1F2433; }
   header { background:#1F2433; color:#FFF7EE; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
-  header h1 { font-size:16px; font-weight:600; } #meta { color:#C0BCBA; font-size:12px; }
+  header h1 { font-size:16px; font-weight:600; display:flex; align-items:baseline; gap:9px; }
+  /* The wordmark is a sibling of #htitle, never inside it: init() overwrites #htitle's text. */
+  header h1 .brand { font-size:10.5px; font-weight:600; letter-spacing:.07em; color:#1F2433;
+    background:#FFF7EE; border-radius:999px; padding:2px 8px; text-decoration:none; white-space:nowrap; }
+  header h1 .brand:hover { background:#FFF; }
+  #meta { color:#C0BCBA; font-size:12px; }
   .lens { display:flex; gap:4px; background:#2F3341; border-radius:10px; padding:4px; }
   .lens button { font-size:12.5px; padding:5px 13px; border-radius:7px; color:#C0BCBA; background:none; border:0; cursor:pointer; }
   .lens button.on { background:#F7B32B; color:#1F2433; font-weight:700; }
@@ -87,7 +92,7 @@
   #systemflow pre { white-space:pre-wrap; font-size:11px; }
 </style></head><body data-lens="changes">
 <header>
-  <h1 id="htitle">mission control</h1>
+  <h1><span id="htitle">mission control</span><a class="brand" href="https://github.com/tapaskar/archwhere" target="_blank" rel="noopener noreferrer">archwhere</a></h1>
   <div class="lens">
     <button data-l="structure">Structure</button>
     <button data-l="changes" class="on">Changes 💬</button>
@@ -440,8 +445,10 @@ async function refreshHeat() {
 
 (async function init() {
   MODEL = await j('/api/model');
-  document.title = MODEL.system + ' — mission control';
-  document.querySelector('#htitle').textContent = MODEL.system + ' — architecture mission control';
+  // The product name stays in both: the tab used to read "<system> — mission control" and the
+  // heading "<system> — architecture mission control", so an install never said "archwhere" anywhere.
+  document.title = MODEL.system + ' — archwhere mission control';
+  document.querySelector('#htitle').textContent = MODEL.system + ' · mission control';
   renderMap();
   renderAsk();
   await refreshState();
