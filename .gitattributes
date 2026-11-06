@@ -1,0 +1,16 @@
+# Merge behaviour for the files several agents touch at once.
+#
+# With parallel agents the conflicts are almost never in code. Across the three open PRs on
+# 6 Nov every collision but two was in these files, so they are the bottleneck, not the work.
+
+# Append-only logs: concurrent entries are additive, so keep both sides instead of conflicting.
+# Union can still interleave entries under one heading — read the result before releasing.
+CHANGELOG.md    merge=union
+
+# Generated from arch/architecture.json by `archwhere doc`. Never merge it: regenerate it.
+# Marked as generated so reviews collapse it and diffs stop drowning the real change.
+ARCHITECTURE.md linguist-generated=true
+
+# Keep line endings stable so a Windows checkout does not manufacture whole-file conflicts.
+* text=auto eol=lf
+*.png binary
