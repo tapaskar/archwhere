@@ -14,16 +14,31 @@ flowchart LR
   examples["Examples"]
   ops["Ops & tests"]
   docs["Docs"]
+  merge-gate["Merge & review gate"]
+  cli["CLI"]
   rail --> core
+  rail --> merge-gate
   record --> core
+  record --> mission
+  record --> rail
   mcp --> core
   mcp --> rail
   mcp --> record
   mcp --> mission
   mission --> core
+  mission --> merge-gate
   mission --> rail
   mission --> record
   archify --> core
+  merge-gate --> core
+  merge-gate --> rail
+  cli --> archify
+  cli --> core
+  cli --> mcp
+  cli --> merge-gate
+  cli --> mission
+  cli --> rail
+  cli --> record
   classDef core fill:#E8EEF9,stroke:#2F4AC0,color:#1F2433
   classDef security fill:#FDE8E4,stroke:#C2410C,color:#1F2433
   classDef feature fill:#FFF4E0,stroke:#B45309,color:#1F2433
@@ -34,17 +49,18 @@ flowchart LR
   classDef other fill:#F2F2EF,stroke:#777,color:#1F2433
   classDef touched fill:#F7B32B,stroke:#1F2433,stroke-width:3px,color:#1F2433
   class core,rail,record core
-  class mcp,mission product
+  class mcp,mission,cli product
   class archify feature
   class integrations infra
   class examples,docs docs
   class ops ops
+  class merge-gate security
 ```
 
 | Component | Kind | Provider | What it is | Owns |
 |---|---|---|---|---|
-| **Core mapper** | core |  | Model loading, glob mapping, renderers. | `lib/where.js` `bin/**` `lib/infer.js` `lib/collide.js` |
-| **Rail & BYOA logic** | core |  | Attention-rail categorisation, runtime signal grading, agent mention. Pure: no network, no fs. | `lib/rail.js` `lib/signals.js` |
+| **Core mapper** | core |  | Model loading, glob mapping, renderers. | `lib/where.js` `lib/infer.js` `lib/collide.js` |
+| **Rail & BYOA logic** | core |  | Attention-rail categorisation, why each item sits where it does, runtime signal grading, agent mention. Pure: no network, no fs. | `lib/rail.js` `lib/signals.js` |
 | **Attributed record** | core |  | Append-only hash-linked log: specs, decisions, findings, corrections, reviews, claims, owner sign-offs, independent-review check. | `lib/record.js` `lib/record-cli.js` `lib/claims.js` `lib/signoff.js` `lib/review.js` |
 | **MCP server** | product | MCP over stdio | archwhere mcp: hand-written JSON-RPC over stdio. Read-only unless --write. No merge or shell tool. | `lib/mcp.js` |
 | **Mission control** | product | Node http · localhost | Local UI server + page, and the bridge that lets CLI agents answer board threads. | `lib/mission.js` `lib/bridge.js` `lib/gh.js` `ui/**` |
@@ -53,6 +69,8 @@ flowchart LR
 | **Examples** | docs |  | Meridian fictional model. | `examples/**` |
 | **Ops & tests** | ops |  | CI and the test suite. | `.github/**` `test/**` `package.json` `package-lock.json` `.gitignore` `.gitattributes` `arch/**` |
 | **Docs** | docs |  | README, license, images. | `*.md` `LICENSE` `docs/**` |
+| **Merge & review gate** | security |  | What stands between an agent's PR and main: the live recheck before a merge, and the comparison that catches a PR weakening the map. | `lib/guard.js` `lib/merge.js` |
+| **CLI** | product |  | The archwhere command: dispatches to everything else. | `bin/**` |
 
 ## Process flows (dynamic views)
 
@@ -62,3 +80,4 @@ flowchart LR
 | **Thread to agent reply** | Operator on the map | Mission control → Rail & BYOA logic → Action & listeners → Mission control |
 | **Agent asks the owner** | An agent on MCP | MCP server → Mission control → Rail & BYOA logic → MCP server → Attributed record |
 | **Claim, review, sign off** | Agents and the owner | MCP server → Attributed record → MCP server → Attributed record → Core mapper → Attributed record |
+| **Owner merges a PR** | Owner at mission control | Mission control → Merge & review gate → Rail & BYOA logic → Merge & review gate → Mission control |

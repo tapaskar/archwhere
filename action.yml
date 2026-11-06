@@ -10,6 +10,10 @@ inputs:
   model:
     description: Path to architecture.json (defaults to arch/architecture.json)
     required: false
+  enforce:
+    description: "Fail the PR when the map is stale, the PR weakens it, or it changes a security zone without the owner-review label. Run it on labeled and unlabeled events too."
+    required: false
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -20,6 +24,8 @@ runs:
         MODEL_ARG=""; [ -n "${{ inputs.model }}" ] && MODEL_ARG="--arch ${{ inputs.model }}"
         node "${{ github.action_path }}/bin/archwhere.js" map --base "$BASE" --format md $MODEL_ARG > /tmp/archwhere-comment.md
     - name: Upsert the PR comment
+      if: always()
+      continue-on-error: true
       uses: actions/github-script@v7
       with:
         script: |
@@ -31,3 +37,11 @@ runs:
           const mine = comments.find(c => c.body && c.body.startsWith('<!-- archwhere -->'));
           if (mine) await github.rest.issues.updateComment({ ...context.repo, comment_id: mine.id, body });
           else await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+    - name: Enforce the map
+      if: always() && inputs.enforce == 'true'
+      shell: bash
+      env:
+        ARCHWHERE_PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        BASE: ${{ inputs.base || format('origin/{0}', github.base_ref) }}
+        MODEL: ${{ inputs.model }}
+      run: node "${{ github.action_path }}/bin/archwhere.js" check --base "$BASE" ${MODEL:+--arch "$MODEL"}
