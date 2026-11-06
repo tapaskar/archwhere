@@ -50,6 +50,8 @@
   .h-ok { box-shadow:0 0 0 4px rgba(18,161,80,.18) !important; border-color:#12A150 !important; }
   .h-warn { box-shadow:0 0 0 4px rgba(232,162,0,.25) !important; border-color:#E8A200 !important; }
   .h-bad { box-shadow:0 0 0 5px rgba(215,38,61,.28) !important; border-color:#D7263D !important; }
+  /* Not knowing has to look different from being well: dashed and dimmed, never green. */
+  .h-unknown { border-style:dashed !important; border-color:#9AA0AC !important; opacity:.7; }
   #rtnote { font-size:11.5px; color:#8A8A8A; margin:4px 2px 8px; display:none; }
   body[data-lens="runtime"] #rtnote { display:block; }
   /* panel */
@@ -306,7 +308,7 @@ function componentDetails(id) {
   const el = document.createElement('div'); el.className = 'cdet';
   el.innerHTML = '<div>' + esc(c.description || '') + '</div>'
     + (c.provider ? '<h4>Provider</h4>' + esc(c.provider) : '')
-    + '<h4>Health</h4>' + (r ? '<span class="st-' + esc(r.status) + '">● ' + esc(r.status) + '</span> · ' + esc((r.lines || []).join(' · '))
+    + '<h4>Health</h4>' + (r ? '<span class="st-' + esc(r.status) + '">● ' + esc(r.status) + '</span> · ' + esc(runtimeLine(r))
         : '<span class="cc">' + (RUNTIME && !RUNTIME.available ? 'runtime unavailable (' + esc(RUNTIME.reason) + ')' : 'no runtime signal for this component') + '</span>')
     + '<h4>Uses</h4>' + chips(c.deps || [])
     + '<h4>Used by</h4>' + chips(usedBy)
@@ -438,6 +440,28 @@ async function refreshState() {
   } catch (e) { $('#meta').textContent = 'state error: ' + e.message; }
 }
 
+/** Errors always with their denominator, then the deploy: "red, and deployed 3 h ago" is a diagnosis. */
+function runtimeLine(r) {
+  const bits = [];
+  for (const f of r.failures || []) {
+    bits.push(f.name + (f.count != null ? ' ' + f.count.toLocaleString('en-GB') : '')
+      + (f.window ? '/' + f.window : ''));
+  }
+  if (r.rate) bits.push('errors ' + r.rate);
+  for (const l of r.lines || []) bits.push(l);
+  if (r.deploy && r.deploy.ref) bits.push('deployed ' + r.deploy.ref + (r.deploy.at ? ' ' + ago(r.deploy.at) : ''));
+  return bits.join(' · ');
+}
+
+/** "3 h ago" from an ISO stamp; the empty string when it is unparseable. */
+function ago(iso) {
+  const t = Date.parse(iso); if (!Number.isFinite(t)) return '';
+  const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+  if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60);
+  return h < 48 ? h + ' h ago' : Math.round(h / 24) + ' d ago';
+}
+
 async function refreshRuntime() {
   try {
     RUNTIME = await j('/api/runtime');
@@ -446,8 +470,12 @@ async function refreshRuntime() {
       const n = $('#n-' + id); if (!n) continue;
       n.classList.remove('h-ok', 'h-warn', 'h-bad');
       const r = RUNTIME.available && RUNTIME.components && RUNTIME.components[id];
-      n.querySelector('.m').textContent = r ? (r.lines || []).join(' · ') : '';
-      if (r && r.status && r.status !== 'off') n.classList.add({ ok: 'h-ok', warn: 'h-warn', bad: 'h-bad' }[r.status] || 'h-ok');
+      n.classList.remove('h-unknown');
+      // No fallback to h-ok: an unrecognised or missing status is unknown, not healthy.
+      // Falling through to green here is how a dead service looked fine for hours.
+      const cls = r && { ok: 'h-ok', warn: 'h-warn', bad: 'h-bad', unknown: 'h-unknown' }[r.status];
+      n.classList.add(cls || 'h-unknown');
+      n.querySelector('.m').textContent = r ? runtimeLine(r) : 'no signal';
     }
   } catch (e) { $('#rtnote').textContent = 'runtime error: ' + e.message; }
 }

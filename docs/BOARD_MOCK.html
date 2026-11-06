@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meridian Board Mock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* archwhere's own board palette: ink header, cream wordmark, bone rules.
+     Layout: three fixed zones — attention rail / component map / thread. */
+  :root {
+    /* --chrome is the dark header bar; --ink is text on paper. Keeping them apart
+       matters: one token for both made every heading unreadable in dark mode. */
+    --chrome:    #1F2433;
+    --on-chrome: #FFF7EE;
+    --ink:      #1F2433;
+    --ink-soft: #2B313F;
+    --cream:    #FFF7EE;
+    --paper:    #F7F6F2;
+    --card:     #FFFFFF;
+    --rule:     #E3E3DE;
+    --body:     #2A2F3C;
+    --muted:    #6B7180;
+    --faint:    #9AA0AC;
+    --accent:   #1F6F6B;
+    --on-accent:#FFFFFF;
+    --good:     #2F7A4F;
+    --warn:     #9A6412;
+    --bad:      #A33028;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --chrome: #10131A; --on-chrome: #F2F0EB;
+      --ink: #EFEDE8; --ink-soft: #3A414E; --cream: #F2F0EB;
+      --paper: #14171E; --card: #1E232B; --rule: #333945;
+      --body: #D9D7D2; --muted: #A4AAB6; --faint: #868D9A;
+      --accent: #74C6BE; --on-accent: #10131A;
+      --good: #78C293; --warn: #E0A944; --bad: #EC8A80;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --chrome: #10131A; --on-chrome: #F2F0EB;
+    --ink: #EFEDE8; --ink-soft: #3A414E; --cream: #F2F0EB;
+    --paper: #14171E; --card: #1E232B; --rule: #333945;
+    --body: #D9D7D2; --muted: #A4AAB6; --faint: #868D9A;
+    --accent: #74C6BE; --on-accent: #10131A;
+    --good: #78C293; --warn: #E0A944; --bad: #EC8A80;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--body);
+    font-family: var(--sans); font-size: 14px; line-height: 1.5;
+    display: flex; flex-direction: column;
+  }
+
+  /* ---- header ---- */
+  header {
+    background: var(--chrome); color: var(--on-chrome); padding: 10px 18px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap; flex: none;
+  }
+  header h1 {
+    font-size: 15px; font-weight: 600; margin: 0;
+    display: flex; align-items: baseline; gap: 9px;
+  }
+  .brand {
+    font-size: 10px; font-weight: 600; letter-spacing: .07em; color: var(--chrome);
+    background: var(--on-chrome); border-radius: 999px; padding: 2px 8px; white-space: nowrap;
+  }
+  .toggle { display: flex; gap: 0; margin-left: auto; border: 1px solid #3C4350; border-radius: 6px; overflow: hidden; }
+  .toggle button {
+    font-family: var(--sans); font-size: 12px; padding: 5px 12px; cursor: pointer;
+    background: transparent; color: #AEB4C0; border: 0; border-right: 1px solid #3C4350;
+  }
+  .toggle button:last-child { border-right: 0; }
+  .toggle button[aria-pressed="true"] { background: var(--on-chrome); color: var(--chrome); font-weight: 600; }
+  .toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .mocknote {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .08em;
+    text-transform: uppercase; color: #8A91A0; border: 1px dashed #3C4350;
+    padding: 2px 8px; border-radius: 4px;
+  }
+
+  /* ---- three zones ---- */
+  .zones {
+    flex: 1; min-height: 0; display: grid; gap: 1px; background: var(--rule);
+    grid-template-columns: 250px minmax(0, 1fr) 340px;
+  }
+  @media (max-width: 1040px) { .zones { grid-template-columns: 1fr; } }
+  .zone { background: var(--paper); overflow-y: auto; padding: 14px; min-height: 0; }
+
+  .zhead {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint); margin: 0 0 10px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .zhead .cnt { color: var(--accent); font-weight: 500; }
+
+  /* ---- attention rail ---- */
+  .att { display: flex; flex-direction: column; gap: 7px; }
+  .item {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 6px;
+    border-left: 3px solid var(--rule); padding: 8px 10px; cursor: pointer;
+    display: flex; flex-direction: column; gap: 3px; text-align: left; width: 100%;
+    font: inherit; color: inherit;
+  }
+  .item:hover { border-color: var(--accent); }
+  .item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .item.bad { border-left-color: var(--bad); }
+  .item.warn { border-left-color: var(--warn); }
+  .item.ready { border-left-color: var(--good); }
+  .item .what { font-weight: 600; color: var(--ink); font-size: 13px; }
+  .item .why { font-size: 11.5px; color: var(--muted); }
+  .item .why b { font-variant-numeric: tabular-nums; color: var(--bad); }
+  .groupcap {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--faint); margin: 12px 0 2px;
+  }
+  .groupcap:first-child { margin-top: 0; }
+
+  /* ---- component map ---- */
+  .lanes { display: flex; flex-direction: column; gap: 14px; }
+  .lane .lname {
+    font-family: var(--mono); font-size: 10px; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--faint); margin-bottom: 6px;
+  }
+  .grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)); }
+  .comp {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 7px;
+    padding: 9px 11px; cursor: pointer; text-align: left; font: inherit; color: inherit;
+    display: flex; flex-direction: column; gap: 5px; position: relative;
+  }
+  .comp:hover { border-color: var(--accent); }
+  .comp:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .comp[aria-current="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .comp .top { display: flex; align-items: center; gap: 6px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--faint); }
+  .dot.ok { background: var(--good); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+  .dot.unknown { background: transparent; border: 2px solid var(--faint); }
+  .mute { margin-left: auto; font-family: var(--mono); font-size: 9px; letter-spacing: .05em;
+          color: var(--warn); border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; }
+  .dep { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .dep.fresh { color: var(--warn); font-weight: 500; }
+  .comp .nm { font-weight: 600; color: var(--ink); font-size: 13px; }
+  .lock { margin-left: auto; font-size: 10px; color: var(--warn); }
+  .fails { display: flex; flex-wrap: wrap; gap: 4px; }
+  .fail {
+    font-family: var(--mono); font-size: 10px; padding: 1px 5px; border-radius: 3px;
+    background: color-mix(in srgb, var(--bad) 12%, transparent);
+    color: var(--bad); border: 1px solid color-mix(in srgb, var(--bad) 32%, transparent);
+    font-variant-numeric: tabular-nums;
+  }
+  .fail.w {
+    background: color-mix(in srgb, var(--warn) 12%, transparent);
+    color: var(--warn); border-color: color-mix(in srgb, var(--warn) 32%, transparent);
+  }
+  .fail.u {
+    background: transparent; color: var(--faint); border-style: dashed;
+    border-color: var(--faint);
+  }
+  .meta { display: flex; gap: 8px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .heatbar { height: 3px; border-radius: 2px; background: var(--rule); overflow: hidden; }
+  .heatbar i { display: block; height: 100%; background: var(--accent); }
+  .lines { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
+
+  /* ---- work strip ---- */
+  .strip { display: grid; gap: 6px; grid-template-columns: repeat(6, minmax(0,1fr)); margin-top: 4px; }
+  @media (max-width: 760px) { .strip { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+  .col {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 7px 8px;
+  }
+  .col .cn {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase;
+    color: var(--faint); display: block; margin-bottom: 4px;
+  }
+  .col .cv { font-size: 19px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .col .cw { font-size: 10.5px; color: var(--muted); }
+
+  /* ---- thread ---- */
+  .thread { display: flex; flex-direction: column; gap: 10px; }
+  .brief {
+    background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 9px 11px;
+  }
+  .brief .bt {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 5px;
+  }
+  .brief dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; font-size: 11.5px; }
+  .brief dt { font-family: var(--mono); color: var(--faint); font-size: 10.5px; }
+  .brief dd { margin: 0; color: var(--body); }
+  .brief dd b { color: var(--bad); }
+
+  .msg { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 9px 11px; }
+  .msg.agent { border-left: 3px solid var(--muted); }
+  .msg .who {
+    display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; flex-wrap: wrap;
+  }
+  .msg .who strong { color: var(--ink); font-size: 12.5px; }
+  .msg .who .attr { font-family: var(--mono); font-size: 10px; color: var(--faint); }
+  .msg p { margin: 0 0 6px; font-size: 13px; }
+  .msg p:last-child { margin-bottom: 0; }
+  .msg code { font-family: var(--mono); font-size: 11.5px; background: var(--paper); padding: .05em .3em; border-radius: 3px; }
+
+  .pr {
+    border: 1px solid var(--rule); border-radius: 5px; padding: 6px 8px; margin-top: 6px;
+    display: flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 11.5px; background: var(--paper);
+  }
+  .chk { font-family: var(--mono); font-size: 10px; }
+  .chk.pass { color: var(--good); } .chk.fail { color: var(--bad); }
+
+  .tag {
+    display: inline-block; font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em;
+    text-transform: uppercase; padding: 1px 6px; border-radius: 999px; border: 1px solid currentColor;
+  }
+  .t-ind { color: var(--good); } .t-same { color: var(--bad); } .t-claim { color: var(--warn); }
+
+  .compose { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 9px 11px; }
+  .compose textarea {
+    width: 100%; border: 0; resize: vertical; font: inherit; font-size: 13px;
+    background: transparent; color: var(--body); min-height: 54px; padding: 0;
+  }
+  .compose textarea:focus { outline: none; }
+  .crow { display: flex; align-items: center; gap: 7px; margin-top: 7px; flex-wrap: wrap; }
+  .ask {
+    font-family: var(--mono); font-size: 11px; border: 1px solid var(--rule);
+    border-radius: 5px; padding: 4px 7px; background: var(--paper); color: var(--body);
+  }
+  .send {
+    margin-left: auto; background: var(--accent); color: var(--on-accent); border: 0;
+    border-radius: 5px; padding: 5px 13px; font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  }
+  .send:hover { filter: brightness(1.08); }
+  .send:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .decide {
+    background: transparent; border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 5px; padding: 4px 9px; font: inherit; font-size: 11.5px; cursor: pointer;
+  }
+  .hint { font-size: 11px; color: var(--faint); }
+
+  details.drawer { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 11px; }
+  details.drawer summary { cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink); }
+  details.drawer p { font-size: 12px; color: var(--muted); margin: 7px 0 0; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>Meridian</span><span class="brand">archwhere</span></h1>
+  <span class="mocknote">mock · invented data</span>
+  <div class="toggle" role="group" aria-label="Card metric">
+    <button id="bHealth" aria-pressed="true">Health</button>
+    <button id="bHeat" aria-pressed="false">Heat</button>
+  </div>
+</header>
+
+<div class="zones">
+
+  <!-- ============ LEFT: attention ============ -->
+  <section class="zone" aria-label="Needs you">
+    <p class="zhead">Needs you <span class="cnt" id="attCount">7</span></p>
+    <div class="att" id="att"></div>
+  </section>
+
+  <!-- ============ CENTRE: map + work ============ -->
+  <section class="zone" aria-label="Components">
+    <p class="zhead">Work <span class="cnt">12 open</span></p>
+    <div class="strip">
+      <div class="col"><span class="cn">Proposed</span><span class="cv">4</span><span class="cw">no claim</span></div>
+      <div class="col"><span class="cn">Claimed</span><span class="cv">3</span><span class="cw">2 agents</span></div>
+      <div class="col"><span class="cn">In PR</span><span class="cv">3</span><span class="cw">1 red</span></div>
+      <div class="col"><span class="cn">Reviewed</span><span class="cv">1</span><span class="cw">independent</span></div>
+      <div class="col"><span class="cn">Signed</span><span class="cv">0</span><span class="cw">—</span></div>
+      <div class="col"><span class="cn">Merged</span><span class="cv">1</span><span class="cw">today</span></div>
+    </div>
+
+    <p class="zhead" style="margin-top:18px">Components <span class="cnt" id="mapMode">live health</span></p>
+    <div class="lanes" id="lanes"></div>
+
+    <p class="zhead" style="margin-top:18px">Reference</p>
+    <details class="drawer">
+      <summary>System flow</summary>
+      <p>Mermaid system map and each process flow, drawn on open. Not a tab — pulled out when you want it.</p>
+    </details>
+    <details class="drawer" style="margin-top:6px">
+      <summary>Record · verifies ✓ 148 entries, 3 active claims</summary>
+      <p>Hash chain intact, witness ok, anchored to tag <code>v1.0.1</code>. Specs, decisions, findings, reviews and sign-offs.</p>
+    </details>
+  </section>
+
+  <!-- ============ RIGHT: thread ============ -->
+  <section class="zone" aria-label="Thread">
+    <p class="zhead">Thread <span class="cnt" id="thName">ticket-engine</span></p>
+    <div class="thread" id="thread"></div>
+  </section>
+
+</div>
+
+<script>
+/* ---------------- invented data, modelled on examples/meridian/architecture.json ---------------- */
+const LANES = [
+  ['Product',  ['web-app','mobile-api','admin-console']],
+  ['Core',     ['ticket-engine','auth']],
+  ['Features', ['search','notifications','billing']],
+  ['Infra',    ['llm-gateway','jobs']],
+  ['Ops',      ['ops','docs']],
+];
+
+const C = {
+  'web-app':       { name:'Web app',        s:'ok',   heat:34, prs:1, threads:0, fails:[], alert:true,
+                     dep:'6 d ago · #198', lines:'1.2k req/h · 0 err · p99 240 ms' },
+  'mobile-api':    { name:'Mobile API',     s:'warn', heat:51, prs:0, threads:1, alert:true,
+                     dep:'6 d ago · #198', fails:[['41 / 3.1k req·h','w']],
+                     lines:'3.1k req/h · p99 610 ms' },
+  'admin-console': { name:'Admin console',  s:'ok',   heat:12, prs:0, threads:0, fails:[], alert:true,
+                     dep:'9 d ago · #181', lines:'90 req/h · 0 err · p99 180 ms' },
+  'ticket-engine': { name:'Ticket engine',  s:'bad',  heat:88, prs:2, threads:3, alert:false,
+                     dep:'3 h ago · #221', fails:[['212 / 1.8k req·h',''],['p99 4.8 s','w']],
+                     lines:'1.8k req/h · 11.5 % failing' },
+  'auth':          { name:'Auth & sessions',s:'ok',   heat:21, prs:1, threads:1, lock:true, fails:[], alert:true,
+                     dep:'11 d ago · #176', lines:'840 req/h · 0 err · p99 95 ms' },
+  'search':        { name:'Search',         s:'warn', heat:44, prs:0, threads:1, alert:false,
+                     dep:'2 d ago · #209', fails:[['18 / 640 req·h','w']],
+                     lines:'640 req/h · p99 2.1 s' },
+  'notifications': { name:'Notifications',  s:'bad',  heat:29, prs:0, threads:2, alert:false,
+                     dep:'2 d ago · #209', fails:[['outbox dead 7','']],
+                     lines:'430 sent/h · 7 undelivered' },
+  'billing':       { name:'Billing',        s:'ok',   heat:17, prs:0, threads:0, lock:true, fails:[], alert:true,
+                     dep:'11 d ago · #176', lines:'60 req/h · 0 err · p99 310 ms' },
+  'llm-gateway':   { name:'LLM gateway',    s:'bad',  heat:63, prs:1, threads:2, alert:false,
+                     dep:'2 d ago · #209', fails:[['restarts 24,522 / 9 h',''],['96 / 2.4k req·h','w']],
+                     lines:'2.4k req/h · 4 % rate-limited' },
+  'jobs':          { name:'Jobs & queues',  s:'warn', heat:38, prs:0, threads:0, alert:false,
+                     dep:'2 d ago · #209', fails:[['queue 1.2k','w']],
+                     lines:'900 job/h · drain 22 min' },
+  'ops':           { name:'Ops & CI',       s:'ok',   heat:26, prs:1, threads:1, fails:[], alert:false,
+                     dep:'today · #217', lines:'—' },
+  'docs':          { name:'Docs',           s:'unknown', heat:8, prs:0, threads:0, alert:false,
+                     dep:'21 d ago · #152', fails:[['no signal 40 min','u']],
+                     lines:'last reported 16:48' },
+};
+
+
+const ATT = [
+  ['failing', [
+    ['bad',  'llm-gateway is crash-looping', 'restarts <b>24,522</b> in 9 h · 96 rate-limit rejections'],
+    ['bad',  'ticket-engine API failures',   '<b>212</b> failed calls in the last hour · p99 4.8 s'],
+    ['bad',  'notifications outbox stuck',   '<b>7</b> dead messages, none retried'],
+    ['warn', 'search timeouts climbing',     '18 in 30 min, was 2 yesterday'],
+  ]],
+  ['blocked', [
+    ['warn', 'auth · needs owner',  'rotate session secret — waiting on you since Tue'],
+  ]],
+  ['not watched', [
+    ['warn', 'docs has gone quiet', 'no signal for 40 min — unknown, not healthy'],
+    ['warn', '6 of 12 components cannot page you', 'only health-alert.js is wired; the rest are display-only'],
+  ]],
+  ['ready to merge', [
+    ['ready', 'web-app · PR #214',  'checks green · reviewed by gpt-5 (openai)'],
+    ['ready', 'ops · PR #217',      'checks green · reviewed by claude-opus-5 (anthropic)'],
+  ]],
+];
+
+const THREADS = {
+  'ticket-engine': {
+    brief: [
+      ['globs',   'lib/tickets/**, lib/sla/**'],
+      ['deps',    'search, notifications, llm-gateway'],
+      ['failing', '<b>212 of 1,840 req/h</b> (11.5 %), p99 4.8 s'],
+      ['deployed','<b>3 h ago</b> \u00b7 PR #221'],
+      ['open',    'PR #221, PR #223'],
+      ['decided', '“SLA clock excludes holidays” — 2 Nov'],
+    ],
+    msgs: [
+      { me:true, who:'you', t:'09:12',
+        body:'@claude the API failure rate jumped at 08:40 and p99 went to 4.8s. Nothing deployed. Find out what changed.' },
+      { who:'claude', attr:'claude-opus-5 · anthropic', t:'09:14',
+        body:'The brief gave me the deploy: PR #221 went out 3 h ago, which is when the failures start. It added synchronous ticket enrichment through <code>llm-gateway</code> \u2014 and that component is crash-looping, 24,522 restarts. Every restart becomes a failed ticket write. The ticket engine is not at fault; it has no timeout on that call.',
+        pr:['#223','draft','fail','1 check failing'] },
+      { who:'kiro', attr:'glm-4.6 · zhipu', t:'09:31', tag:['t-ind','independent review'],
+        body:'Agree on cause. The fix adds a 2 s timeout but no fallback — tickets will still fail, just faster. Suggest queueing enrichment through <code>jobs</code> instead.' },
+    ],
+  },
+  'llm-gateway': {
+    brief: [
+      ['globs',   'lib/llm/**, providers/**'],
+      ['deps',    '—'],
+      ['failing', '<b>restarts 24,522 in 9 h</b>, 96 of 2,400 req/h rate-limited'],
+      ['deployed','2 d ago \u00b7 PR #209'],
+      ['alerting','<b>none</b> \u2014 nothing paged anyone for 9 h'],
+      ['open',    'PR #223'],
+      ['decided', '—'],
+    ],
+    msgs: [
+      { me:true, who:'you', t:'09:36',
+        body:'@claude @kiro why is this restarting 24 thousand times? Both of you look at it.' },
+      { who:'claude', attr:'claude-opus-5 · anthropic', t:'09:38',
+        body:'Unhandled rejection on provider 429. The retry wrapper rethrows after the last attempt and nothing catches it at the top level, so the process exits and pm2 restarts it. It has been doing this since the rate limit dropped on 3 Nov.' },
+      { who:'kiro', attr:'glm-4.6 · zhipu', t:'09:40', tag:['t-ind','independent review'],
+        body:'Same conclusion, reached separately. Note the restart counter also resets the token budget each time, which is why spend looks lower than it is.' },
+    ],
+  },
+  'auth': {
+    brief: [
+      ['globs',   'lib/auth/**, lib/session/**'],
+      ['deps',    '—'],
+      ['zone',    '<b>security</b> — owner review required'],
+      ['open',    'PR #219'],
+      ['decided', '“Sessions are 14 days, no sliding” — 21 Oct'],
+    ],
+    msgs: [
+      { me:true, who:'you', t:'Tue 16:02',
+        body:'Rotating the session secret needs a migration plan. Nobody merges this without me.' },
+      { who:'claude', attr:'claude-opus-5 · anthropic', t:'Tue 16:20', tag:['t-claim','claim · 30 min left'],
+        body:'Understood — this component is marked a security zone, so I have written the plan as a spec and claimed the task rather than opening a PR. Dual-key rotation, old secret valid 14 days to match session length.' },
+    ],
+  },
+  'notifications': {
+    brief: [
+      ['globs',   'lib/notify/**'],
+      ['deps',    'jobs'],
+      ['failing', '<b>outbox dead 7</b>'],
+      ['open',    '—'],
+      ['decided', '—'],
+    ],
+    msgs: [
+      { me:true, who:'you', t:'08:55',
+        body:'@kiro seven dead messages in the outbox. What are they and why did they stop retrying?' },
+      { who:'kiro', attr:'glm-4.6 · zhipu', t:'09:02',
+        body:'All seven are SMS to the same provider, all failed with a 403. The retry policy gives up after 5 attempts and there is no dead-letter alert, so they sat there. The provider key expired on 1 Nov.' },
+    ],
+  },
+};
+const FALLBACK = { brief:[['globs','—'],['deps','—'],['open','—'],['decided','—']], msgs:[] };
+
+/* ---------------- render ---------------- */
+let sel = 'ticket-engine';
+let mode = 'health';
+const $ = s => document.querySelector(s);
+
+function renderAtt() {
+  const el = $('#att'); el.innerHTML = '';
+  let n = 0;
+  for (const [cap, rows] of ATT) {
+    const h = document.createElement('p'); h.className = 'groupcap'; h.textContent = cap;
+    el.appendChild(h);
+    for (const [sev, what, why] of rows) {
+      n++;
+      const b = document.createElement('button');
+      b.className = 'item ' + sev; b.type = 'button';
+      b.innerHTML = '<span class="what"></span><span class="why">' + why + '</span>';
+      b.querySelector('.what').textContent = what;
+      const key = Object.keys(C).find(k => what.startsWith(k));
+      if (key) b.addEventListener('click', () => select(key));
+      el.appendChild(b);
+    }
+  }
+  $('#attCount').textContent = n;
+}
+
+function card(id) {
+  const c = C[id];
+  const b = document.createElement('button');
+  b.className = 'comp'; b.type = 'button';
+  b.setAttribute('aria-current', id === sel ? 'true' : 'false');
+
+  const top = document.createElement('div'); top.className = 'top';
+  const dot = document.createElement('span'); dot.className = 'dot ' + c.s;
+  const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = c.name;
+  top.append(dot, nm);
+  if (c.lock) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '🔒'; l.title = 'security zone'; top.appendChild(l); }
+  if (!c.alert) {
+    const m = document.createElement('span'); m.className = 'mute';
+    m.textContent = 'no alert'; m.title = 'nothing pages you if this fails';
+    top.appendChild(m);
+  }
+  b.appendChild(top);
+
+  if (mode === 'health') {
+    if (c.fails && c.fails.length) {
+      const f = document.createElement('div'); f.className = 'fails';
+      for (const [txt, w] of c.fails) {
+        const s = document.createElement('span'); s.className = 'fail ' + (w || ''); s.textContent = txt;
+        f.appendChild(s);
+      }
+      b.appendChild(f);
+    }
+    const ln = document.createElement('div'); ln.className = 'lines'; ln.textContent = c.lines;
+    b.appendChild(ln);
+    const dp = document.createElement('div');
+    const fresh = /h ago|today/.test(c.dep) && c.s === 'bad';
+    dp.className = 'dep' + (fresh ? ' fresh' : '');
+    dp.textContent = (fresh ? '▲ ' : '') + 'deployed ' + c.dep;
+    b.appendChild(dp);
+  } else {
+    const hb = document.createElement('div'); hb.className = 'heatbar';
+    const i = document.createElement('i'); i.style.width = c.heat + '%'; hb.appendChild(i);
+    b.appendChild(hb);
+    const ln = document.createElement('div'); ln.className = 'lines';
+    ln.textContent = c.heat + ' commits · 30 d';
+    b.appendChild(ln);
+  }
+
+  const m = document.createElement('div'); m.className = 'meta';
+  m.textContent = (c.prs ? c.prs + ' PR' + (c.prs > 1 ? 's' : '') : 'no PR')
+                + ' · ' + (c.threads ? c.threads + ' thread' + (c.threads > 1 ? 's' : '') : 'no thread');
+  b.appendChild(m);
+
+  b.addEventListener('click', () => select(id));
+  return b;
+}
+
+function renderMap() {
+  const el = $('#lanes'); el.innerHTML = '';
+  for (const [lname, ids] of LANES) {
+    const lane = document.createElement('div'); lane.className = 'lane';
+    const h = document.createElement('div'); h.className = 'lname'; h.textContent = lname;
+    const g = document.createElement('div'); g.className = 'grid';
+    for (const id of ids) g.appendChild(card(id));
+    lane.append(h, g); el.appendChild(lane);
+  }
+  $('#mapMode').textContent = mode === 'health' ? 'live health' : 'change heat · 30 d';
+}
+
+function renderThread() {
+  const t = THREADS[sel] || FALLBACK;
+  const el = $('#thread'); el.innerHTML = '';
+  $('#thName').textContent = sel;
+
+  const br = document.createElement('div'); br.className = 'brief';
+  const bt = document.createElement('div'); bt.className = 'bt'; bt.textContent = 'attached to every mention';
+  const dl = document.createElement('dl');
+  for (const [k, v] of t.brief) {
+    const dt = document.createElement('dt'); dt.textContent = k;
+    const dd = document.createElement('dd'); dd.innerHTML = v;
+    dl.append(dt, dd);
+  }
+  br.append(bt, dl); el.appendChild(br);
+
+  for (const m of t.msgs) {
+    const d = document.createElement('div'); d.className = 'msg' + (m.me ? '' : ' agent');
+    const who = document.createElement('div'); who.className = 'who';
+    const s = document.createElement('strong'); s.textContent = m.who;
+    who.appendChild(s);
+    if (m.attr) { const a = document.createElement('span'); a.className = 'attr'; a.textContent = m.attr; who.appendChild(a); }
+    if (m.tag) { const g = document.createElement('span'); g.className = 'tag ' + m.tag[0]; g.textContent = m.tag[1]; who.appendChild(g); }
+    const tm = document.createElement('span'); tm.className = 'attr'; tm.style.marginLeft = 'auto'; tm.textContent = m.t;
+    who.appendChild(tm);
+    d.appendChild(who);
+    const p = document.createElement('p'); p.innerHTML = m.body; d.appendChild(p);
+    if (m.pr) {
+      const pr = document.createElement('div'); pr.className = 'pr';
+      pr.innerHTML = '<strong>PR ' + m.pr[0] + '</strong> <span class="attr">' + m.pr[1] + '</span>'
+        + '<span class="chk ' + (m.pr[2] === 'pass' ? 'pass' : 'fail') + '">'
+        + (m.pr[2] === 'pass' ? '✓ ' : '✗ ') + m.pr[3] + '</span>';
+      d.appendChild(pr);
+    }
+    el.appendChild(d);
+  }
+
+  const cp = document.createElement('div'); cp.className = 'compose';
+  const ta = document.createElement('textarea');
+  ta.setAttribute('aria-label', 'Write to the thread');
+  ta.placeholder = 'Write what is wrong, or what should change. Mention @claude or @kiro and the brief above goes with it.';
+  cp.appendChild(ta);
+  const row = document.createElement('div'); row.className = 'crow';
+  const ask = document.createElement('select'); ask.className = 'ask'; ask.setAttribute('aria-label', 'Ask');
+  for (const o of ['Ask: @claude', 'Ask: @kiro', 'Ask: both', 'Ask: nobody']) {
+    const op = document.createElement('option'); op.textContent = o; ask.appendChild(op);
+  }
+  const dec = document.createElement('button'); dec.className = 'decide'; dec.type = 'button';
+  dec.textContent = 'Make this a decision';
+  dec.title = 'Writes a decision entry to the record, attributed and hash-linked';
+  const send = document.createElement('button'); send.className = 'send'; send.type = 'button'; send.textContent = 'Send';
+  row.append(ask, dec, send); cp.appendChild(row);
+  const hint = document.createElement('p'); hint.className = 'hint';
+  hint.style.margin = '7px 0 0';
+  hint.textContent = 'Merge always runs with your token. Agents never merge.';
+  cp.appendChild(hint);
+  el.appendChild(cp);
+}
+
+function select(id) { sel = id; renderMap(); renderThread(); }
+
+$('#bHealth').addEventListener('click', () => {
+  mode = 'health'; $('#bHealth').setAttribute('aria-pressed','true'); $('#bHeat').setAttribute('aria-pressed','false'); renderMap();
+});
+$('#bHeat').addEventListener('click', () => {
+  mode = 'heat'; $('#bHeat').setAttribute('aria-pressed','true'); $('#bHealth').setAttribute('aria-pressed','false'); renderMap();
+});
+
+renderAtt(); renderMap(); renderThread();
+</script>
+</body>
+</html>
