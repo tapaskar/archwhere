@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Working Board Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* Palette taken from archwhere's own mission board: ink #1F2433, cream #FFF7EE, bone border.
+     Layout: single measured column, full-bleed tables and diagrams. */
+  :root {
+    --ink:        #1F2433;
+    --paper:      #FBFAF7;
+    --card:       #FFFFFF;
+    --rule:       #E3E3DE;
+    --body:       #2A2F3C;
+    --muted:      #6B7180;
+    --accent:     #1F6F6B;
+    --good:       #2F7A4F;
+    --warn:       #9A6412;
+    --bad:        #A33028;
+    --display: "Newsreader", Georgia, serif;
+    --sans: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ink:    #E8E6E1;
+      --paper:  #15181F;
+      --card:   #1C2027;
+      --rule:   #2E333D;
+      --body:   #D6D4CF;
+      --muted:  #9AA0AC;
+      --accent: #6FBDB6;
+      --good:   #72B98C;
+      --warn:   #D9A23F;
+      --bad:    #E08279;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink:    #E8E6E1;
+    --paper:  #15181F;
+    --card:   #1C2027;
+    --rule:   #2E333D;
+    --body:   #D6D4CF;
+    --muted:  #9AA0AC;
+    --accent: #6FBDB6;
+    --good:   #72B98C;
+    --warn:   #D9A23F;
+    --bad:    #E08279;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--paper); color: var(--body);
+    font-family: var(--sans); font-size: 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 50rem; margin: 0 auto; padding: 56px 20px 96px; }
+
+  header.top { border-bottom: 2px solid var(--ink); padding-bottom: 20px; margin-bottom: 36px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--accent); margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--display); font-weight: 600; color: var(--ink);
+    font-size: clamp(30px, 6vw, 44px); line-height: 1.12; margin: 0 0 12px;
+    text-wrap: balance; letter-spacing: -.01em;
+  }
+  .standfirst { font-size: 18px; color: var(--muted); margin: 0; max-width: 40rem; }
+
+  h2 {
+    font-family: var(--display); font-weight: 600; color: var(--ink);
+    font-size: 26px; line-height: 1.2; margin: 52px 0 6px; text-wrap: balance;
+  }
+  h2 .num {
+    font-family: var(--mono); font-size: 12px; color: var(--accent);
+    display: block; letter-spacing: .1em; margin-bottom: 6px; font-weight: 500;
+  }
+  h3 {
+    font-family: var(--sans); font-weight: 600; color: var(--ink);
+    font-size: 16px; margin: 28px 0 4px; text-wrap: balance;
+  }
+  p { margin: 12px 0; }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+  code {
+    font-family: var(--mono); font-size: .875em; background: var(--card);
+    border: 1px solid var(--rule); border-radius: 4px; padding: .08em .34em;
+    color: var(--ink);
+  }
+  pre {
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.65;
+    background: var(--card); border: 1px solid var(--rule); border-left: 3px solid var(--accent);
+    border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 16px 0;
+    color: var(--ink);
+  }
+  pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+
+  .tablewrap { overflow-x: auto; margin: 18px 0; border: 1px solid var(--rule); border-radius: 8px; background: var(--card); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+    background: var(--paper);
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .pill {
+    display: inline-block; font-family: var(--mono); font-size: 10.5px;
+    letter-spacing: .07em; text-transform: uppercase; padding: 2px 7px;
+    border-radius: 999px; border: 1px solid currentColor; white-space: nowrap;
+  }
+  .p-bad { color: var(--bad); } .p-warn { color: var(--warn); }
+  .p-good { color: var(--good); } .p-new { color: var(--accent); }
+
+  .card {
+    background: var(--card); border: 1px solid var(--rule);
+    border-radius: 8px; padding: 18px 20px; margin: 20px 0;
+  }
+  .card.flag { border-left: 3px solid var(--bad); }
+  .card.note { border-left: 3px solid var(--accent); }
+  .card h3 { margin-top: 0; }
+  .card > :last-child { margin-bottom: 0; }
+
+  ul, ol { margin: 12px 0; padding-left: 22px; }
+  li { margin: 6px 0; }
+  li > strong { color: var(--ink); }
+
+  .zones { display: grid; gap: 14px; margin: 20px 0; }
+  @media (min-width: 680px) { .zones { grid-template-columns: repeat(3, 1fr); } }
+  .zone {
+    background: var(--card); border: 1px solid var(--rule); border-radius: 8px;
+    padding: 16px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .zone .zn {
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--accent);
+  }
+  .zone h3 { margin: 0; font-size: 15px; }
+  .zone p { margin: 0; font-size: 14px; color: var(--muted); }
+
+  footer.end {
+    margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--rule);
+    font-size: 13.5px; color: var(--muted);
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="eyebrow">archwhere · board redesign</p>
+  <h1>From inspector to workbench</h1>
+  <p class="standfirst">The board shows you boxes because it was built to describe a map, not to work on one. Here is what is actually broken — including the alerting gap that no board design fixes — and a plan that turns six lenses into one surface where writing is the interface.</p>
+</header>
+
+<h2><span class="num">Diagnosis 01</span>Runtime is empty for a one-line reason</h2>
+
+<p><code>RUNTIME_URL</code> is not set, so <code>/api/runtime</code> returns <code>{available:false, reason:"RUNTIME_URL not set"}</code> and every component greys out. The board is behaving correctly; nothing is pointed at it.</p>
+
+<p>Your obs app already serves the exact shape the board wants, on port 8900:</p>
+
+<pre><code>$ curl localhost:8900/api/arch-metrics
+components: 11
+  assistant-core  {"status":"warn","lines":["pm2 online","up 9 h","restarts 24522"]}
+  pa-telegram     {"status":"warn","lines":["pm2 online","up 1 d","restarts 25"]}
+  meetings        {"status":"ok",  "lines":["pm2 online","up 8 d","restarts 6"]}</code></pre>
+
+<p>So the Runtime lens lights up the moment you set it:</p>
+
+<pre><code>RUNTIME_URL=http://127.0.0.1:8900/api/arch-metrics npm run arch:mission</code></pre>
+
+<div class="card flag">
+  <h3>Two things that output is telling you <span class="pill p-bad">unattended</span></h3>
+  <p><strong>24,522 restarts</strong> on <code>assistant-core</code> and <code>pa-account</code>, with 9 hours uptime. That is a crash loop, not a healthy service. <code>statusFor()</code> grades anything above 10 restarts as <code>warn</code>, so a service that has died twenty-four thousand times looks the same as one that restarted eleven times.</p>
+  <p>And <code>outbox: {pending: 0, dead: 1, sent: 59}</code> from <code>/api/summary</code>: one message is dead and nothing surfaces it.</p>
+</div>
+
+<h2><span class="num">Diagnosis 02</span>It is liveness, not observability</h2>
+
+<p>This is the real answer to "Runtime does not show any observability". <code>obs/arch-metrics.js</code> derives status from one input — the pm2 process list:</p>
+
+<pre><code>function statusFor(proc) {
+  if (proc.status !== 'online') return 'bad';
+  if ((proc.restarts || 0) >= 10) return 'warn'; // flapping
+  ...
+}</code></pre>
+
+<p>Process up, process down, process flapping. That is all it knows. But the failure signals you want are <em>already collected</em> by the same obs app and served on <code>/api/summary</code> — they are simply never folded into the per-component view:</p>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Signal already in /api/summary</th><th>Live value</th><th>On the board?</th></tr></thead>
+  <tbody>
+    <tr><td><code>voice.calls.failed</code></td><td class="n">0</td><td><span class="pill p-bad">no</span></td></tr>
+    <tr><td><code>health.errorsLast10min</code></td><td class="n">0</td><td><span class="pill p-bad">no</span></td></tr>
+    <tr><td><code>health.calls.failed</code></td><td class="n">0</td><td><span class="pill p-bad">no</span></td></tr>
+    <tr><td><code>health.waRelay.{refused,failed}</code></td><td class="n">0, 0</td><td><span class="pill p-bad">no</span></td></tr>
+    <tr><td><code>outbox.dead</code></td><td class="n">1</td><td><span class="pill p-bad">no</span></td></tr>
+    <tr><td><code>tasksOpen</code></td><td class="n">7</td><td><span class="pill p-bad">no</span></td></tr>
+    <tr><td><code>procs[].restarts</code></td><td class="n">24522</td><td><span class="pill p-warn">yes, mis-graded</span></td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>The data exists. The pipe into the map is one function wide.</p>
+
+<p>Two things are missing from <em>both</em> sides, and they are the reason a failure count on its own cannot be read:</p>
+
+<ul>
+  <li><strong>Traffic.</strong> 212 failures out of 300 requests is an outage. 212 out of two million is noise. Errors without a denominator are not a signal. The golden-signal set — latency, traffic, errors, saturation — exists precisely so a number can be interpreted; this board currently carries one of the four.</li>
+  <li><strong>What changed.</strong> The highest-value fact in any incident is the last deploy. The board already holds PRs and git heat per component and never joins them to health, so the first question you ask when a card turns red is the one question it cannot answer.</li>
+</ul>
+
+<h2><span class="num">Diagnosis 03</span>Nothing pages you <span class="pill p-bad">the real gap</span></h2>
+
+<p>A dashboard only works when somebody is looking at it. The crash loop above ran for nine hours and nobody knew, because no alert watches it.</p>
+
+<p>What you have is <code>obs/health-alert.js</code>, and it is well built. Three consecutive red checks before it fires, one update per distinct reason, a six-hour reminder while red, a recovery message carrying the downtime, and nothing counted as alerted until the send actually succeeded. That is textbook flap suppression.</p>
+
+<div class="card flag">
+  <h3>It watches one component out of eleven</h3>
+  <p>The alerter consumes the Health app's own red/green endpoint and nothing else. No alert path references restarts, API failure rates or the dead outbox — grep the file and the only hit for <code>restart</code> is an unrelated log line.</p>
+  <p>You have a good alerting engine pointed at 9&nbsp;% of your system. Widening it is cheaper than any board work in this document and worth more.</p>
+</div>
+
+<h2><span class="num">Diagnosis 04</span>Six lenses make a viewer, not a workbench</h2>
+
+<p>Structure, Changes, Heat, Runtime, System flow, Record. Each is a different <em>way of looking at</em> the same map. None of them is a place where work happens, so every question costs a tab change and the answer never sits next to the thing you would do about it.</p>
+
+<p>The attention rail is closer to right — <code>{security, blocked, attention, mergeable}</code> — but it is driven entirely by GitHub labels (<code>rail.js</code> reads <code>security</code>, <code>blocked</code>, <code>needs-owner</code>, <code>owner-review</code>). It cannot see a failing service, because runtime never reaches it.</p>
+
+<h2><span class="num">Design</span>One surface, three zones</h2>
+
+<p>Replace the lens tabs with a single working view. Nothing is hidden behind a tab; the two heavy drawings become drawers you pull open when you want them.</p>
+
+<div class="zones">
+  <div class="zone">
+    <span class="zn">left · needs you</span>
+    <h3>Attention</h3>
+    <p>Failing services, blocked threads, PRs ready to merge, dead outbox items. One ranked list, severity-striped.</p>
+  </div>
+  <div class="zone">
+    <span class="zn">centre · the map</span>
+    <h3>Components</h3>
+    <p>One card per component: health dot, failure count, open PRs, open threads, last decision. Health and heat are a toggle on the card, not separate tabs.</p>
+  </div>
+  <div class="zone">
+    <span class="zn">right · the work</span>
+    <h3>Thread</h3>
+    <p>Write here. Mention an agent, read replies, see the PR it opened and the checks on it, without leaving the page.</p>
+  </div>
+</div>
+
+<p>Tab count goes from six to zero. <strong>System flow</strong> and <strong>Record</strong> become drawers — they are reference material, consulted rarely, and both are expensive to draw.</p>
+
+<h3>Writing is the interface</h3>
+
+<p>Today a comment becomes a GitHub issue labelled <code>component:&lt;id&gt;</code> with an appended mention. That is the right bus. What is missing is <em>context</em>: the agent receives your sentence and nothing else.</p>
+
+<p>Linear's agent integration, generally available since July 2026, captures the entire issue description and comments as context when you mention an agent. Do the same, from the map — when you write <code>@claude the no-answer rate is climbing</code> on a component, the issue body should carry, automatically:</p>
+
+<ul>
+  <li>the component's declared <strong>file globs and dependencies</strong>, so the agent knows its boundary before it starts</li>
+  <li>its <strong>current runtime lines and recent failures</strong> — the agent reads the symptom you are reacting to</li>
+  <li><strong>open PRs and the last decisions</strong> from the record, so it does not redo settled work</li>
+  <li>whether the component is a <strong>security zone</strong>, which should change how the agent behaves</li>
+</ul>
+
+<p>That one change is the difference between a chat box and a brief.</p>
+
+<h3>The board gains a work state, with no second store</h3>
+
+<p>This is what the merged record makes possible. It already holds <code>claim</code>, <code>work</code>, <code>review</code>, <code>signoff</code> and <code>decision</code> entries, each attributed to an author, agent, model and vendor. Derive the columns from those entries plus GitHub — never from a new database:</p>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Column</th><th>Derived from</th></tr></thead>
+  <tbody>
+    <tr><td>Proposed</td><td>an open thread with no claim</td></tr>
+    <tr><td>Claimed</td><td><code>claim</code> entry, unexpired, with its agent and role</td></tr>
+    <tr><td>In PR</td><td><code>work</code> entry, plus the live PR and its checks</td></tr>
+    <tr><td>Reviewed</td><td><code>review</code> entry — marked independent only when <code>record independent</code> passes</td></tr>
+    <tr><td>Signed off</td><td><code>signoff</code> entry, verified Ed25519</td></tr>
+    <tr><td>Merged</td><td>GitHub</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Two properties fall out of this for free. Every card shows <em>which agent and which model</em> is holding it, because the record demands attribution. And a card cannot claim review by the same vendor that wrote the code, because <code>record independent</code> already refuses it.</p>
+
+<h2><span class="num">Plan</span>Five phases, each shippable alone</h2>
+
+<h3>Phase 1 — Make failures visible, and make them page you <span class="pill p-new">start here</span></h3>
+<p>Nothing in this phase touches the board's layout, and it is the whole of your observability complaint. The last item in it is the most valuable thing in this document.</p>
+<ul>
+  <li>Set <code>RUNTIME_URL</code>. Runtime works today.</li>
+  <li>Widen the runtime contract so a number can be <em>read</em>: errors against traffic, the last deploy, and an honest <code>unknown</code>.
+<pre><code>{"components": {"&lt;id&gt;": {
+  "status": "ok|warn|bad|unknown",
+  "deploy": {"at": "2026-11-05T14:02:00Z", "ref": "PR #221"},
+  "signals": {
+    "traffic":    {"value": 1840, "unit": "req/h"},
+    "errors":     {"value": 212, "of": 1840},
+    "latency":    {"p99_ms": 4800},
+    "saturation": {"value": 1200, "unit": "queued"}
+  },
+  "failures": [{"name": "restarts", "count": 24522, "window": "9h",
+                "severity": "bad"}],
+  "lines": ["pm2 online", "up 9 h"],
+  "links": [{"label": "errors", "url": "https://obs…/errors?c=&lt;id&gt;"}]
+}}}</code></pre>
+  </li>
+  <li><strong>Errors always carry <code>of</code>.</strong> A count without a denominator is not a signal, and the board should refuse to render one as if it were.</li>
+  <li><strong><code>unknown</code> is not <code>ok</code>.</strong> A component whose signal is stale or absent must look different from a healthy one. Silence reading as green is how the nine hours happened.</li>
+  <li>Fold <code>/api/summary</code> into <code>arch-metrics.js</code>: per-component counts from <code>voice.calls.{started,failed}</code>, <code>health.errorsLast10min</code>, <code>waRelay.refused/failed</code>, <code>outbox.dead</code> — taking <code>started</code> as the denominator, not only <code>failed</code>.</li>
+  <li><strong>Join the deploy.</strong> The board already knows merged PRs per component; put the last one on the card beside the health. "Red, and deployed 3 h ago" is a diagnosis. "Red" is a notification.</li>
+  <li>Grade on severity, not a single threshold. Restarts in the thousands is <code>bad</code>. Keep the rule in one function, make the numbers per-component config rather than constants, and test it.</li>
+  <li>Feed runtime into the attention rail so a failing component ranks beside a blocked thread.</li>
+  <li><strong>Point the existing alerter at all of it.</strong> <code>health-alert.js</code> already has the noise rules right; give it <code>arch-metrics</code> as a second source so every component can page you, not just one. Do this first if you only do one thing.</li>
+</ul>
+
+<h3>Phase 2 — Collapse the lenses</h3>
+<ul>
+  <li>One view: rail, map, thread. Health and heat become a per-card toggle.</li>
+  <li>System flow and Record become drawers, loaded on open as Mermaid already is.</li>
+  <li>Click a component anywhere and the thread opens beside it — never a navigation.</li>
+</ul>
+
+<h3>Phase 3 — Briefs instead of comments</h3>
+<ul>
+  <li>Compose box with <code>@agent</code> autocomplete from the configured agent list.</li>
+  <li>Attach component context to the issue body automatically, as listed above.</li>
+  <li>Show agent replies inline with the PR it opened, its checks, and its declared model and vendor from the record.</li>
+  <li>Keep <code>/api/merge</code> as it is: the merge button acts with the human's token. Agents never merge.</li>
+</ul>
+
+<h3>Phase 4 — Work state on the board</h3>
+<ul>
+  <li>Derive the six columns from the record and GitHub.</li>
+  <li>Show the holding agent and model on each card; show expiry on stale claims.</li>
+  <li>Mark the independence check on anything claiming review.</li>
+</ul>
+
+<h3>Phase 5 — Let the product take shape</h3>
+<p>The piece your note is really asking for: discussion that accumulates into a product rather than scrolling away.</p>
+<ul>
+  <li><strong>Promote a thread to a decision.</strong> A button that writes a <code>decision</code> entry to the record, attributed, hash-linked, greppable months later. The conversation stays on GitHub; the conclusion becomes durable.</li>
+  <li><strong>Specs on components.</strong> <code>record spec put</code> already versions a spec by content hash and supersedes the previous one. Surface the current spec on the card, so a component carries its intent, not only its globs.</li>
+  <li><strong>A findings feed.</strong> <code>finding</code> entries from agents, on the component they concern — this is where "something is not working" gets written down by whoever noticed.</li>
+</ul>
+
+<div class="card note">
+  <h3>One thing to decide before Phase 1</h3>
+  <p>The runtime contract is the seam between archwhere and whatever you run. Keep it deliberately dumb — <code>status</code>, <code>lines</code>, <code>failures</code>, <code>links</code> — so anyone can satisfy it from Prometheus, Datadog or a shell script, and archwhere never learns to speak a vendor's API. This is the same choice Backstage made and the reason its catalog outlived particular monitoring tools: the portal stays portable, and the adapter is the user's problem.</p>
+</div>
+
+<h2><span class="num">Scope</span>What this is not, and what it still lacks</h2>
+
+<p>Three things are deliberately out:</p>
+<ul>
+  <li><strong>Not a metrics store.</strong> No time series, no retention. The board reads a current snapshot and links out for history.</li>
+  <li><strong>Not a second source of truth.</strong> Threads stay GitHub issues, decisions stay record entries. If it is not in one of those, the board does not know it.</li>
+  <li><strong>Not an agent runner.</strong> The bus stays GitHub; any agent that can read an issue can answer. That is what lets Claude, Kiro and anything else coexist.</li>
+</ul>
+
+<p>And two are genuine shortfalls against normal operational practice, worth naming rather than hiding:</p>
+<ul>
+  <li><strong>No SLOs, so every threshold is a judgement call.</strong> Proper practice derives alerting from an error budget and its burn rate, so you can tell "degraded but within budget" from "spending the quarter this afternoon". Per-component config is a step toward that, not a substitute. Revisit once there is enough traffic for a budget to mean anything.</li>
+  <li><strong>No trend, by consequence of holding no history.</strong> A snapshot cannot answer "is this getting worse", which is usually the real question. The <code>links</code> field carries that weight; make sure it actually points somewhere with history rather than being decorative.</li>
+</ul>
+
+<p>Related, and outside this plan: the raw material for deployment frequency, lead time, change failure rate and mean time to restore is all present in PRs, merges and failures, and none of it is computed. Less urgent than alerting, but it is the standard way to answer whether any of this is working.</p>
+
+<h2><span class="num">Boundary</span>What stays free, and what the hosted plan sells</h2>
+
+<p>Decided now, before the first outside pull request, because the answer shapes where code is written rather than only how it is priced.</p>
+
+<div class="card note">
+  <h3>The principle</h3>
+  <p><strong>Free: anything one developer runs on one machine, for one repository.</strong> That is the whole CLI, <code>check</code>, the local board, the IR, <code>SKILL.md</code>, the GitHub Action, the MCP server and the local record.</p>
+  <p><strong>Paid: anything that must keep running when nobody is at the keyboard, or that must be external to be worth trusting.</strong> Nothing is removed from the free tier to create the paid one.</p>
+</div>
+
+<p>That second clause is the test to apply whenever a feature is tempting to move behind the paywall. If it does not need to run unattended, and does not need to be a third party, it stays free.</p>
+
+<div class="tablewrap">
+<table>
+  <thead><tr><th>Hosted plan</th><th>Why it cannot simply be self-run</th></tr></thead>
+  <tbody>
+    <tr><td>Witness &amp; anchor for the record</td><td>The strongest of these. <code>record verify</code> already admits "a full rewrite of this directory would not be noticed", and today's anchors are a git tag or an issue — both in the repository a rewriter already controls. Third-party attestation is worthless if the third party is you.</td></tr>
+    <tr><td>Alerting</td><td>A board only works while someone is looking at it. Paging has to outlive the laptop.</td></tr>
+    <tr><td>History and trends</td><td>Needs retention. It is also the gap this plan openly leaves: a snapshot cannot say whether something is getting worse.</td></tr>
+    <tr><td>Org-wide board across repositories</td><td>Needs a server holding state across many checkouts.</td></tr>
+    <tr><td>Always-on board with SSO</td><td>A shared URL and an identity provider, not <code>localhost:4610</code>.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>Licence: keep MIT, and protect the name instead</h3>
+
+<p>Every human commit in this repository is the owner's, so relicensing is still possible — but that ends with the first outside contribution. Three things follow:</p>
+
+<ul>
+  <li><strong>MIT stays.</strong> Hosting archwhere is trivial — zero dependencies, one Node process, 44&nbsp;kB — so no licence makes operations a moat. The licence's job is adoption, and MIT is best at that. AGPL would deter resale at the cost of the enterprises that ban it outright, which is the wrong trade at this size.</li>
+  <li><strong>The paid code lives in a private repository from its first commit.</strong> Then the core's licence has no bearing on revenue, and nothing has to be withdrawn later. Un-publishing a feature is far harder than never publishing it.</li>
+  <li><strong>Trademark the name.</strong> A fork can take MIT code; it cannot be called archwhere. For Grafana, Redis and Elastic the mark, not the licence, turned out to be the asset.</li>
+</ul>
+
+<p>Add a <code>CONTRIBUTING.md</code> carrying a DCO before merging anyone else's work, so the relicensing option survives.</p>
+
+<div class="card flag">
+  <h3>Do not build the billing yet</h3>
+  <p>The repository is six days old with five stars and one npm release, and the traffic from its launch day is already decaying. There is no demand signal to price against. Decide the boundary now so that no paid feature is accidentally published; build the free tier until something tells you what a team will pay for.</p>
+</div>
+
+<footer class="end">
+  Grounded in archwhere <code>main</code> at <code>ae60e29</code>, with the MCP server and attributed record merged, and in the live obs app on port 8900. Figures quoted from <code>/api/arch-metrics</code> and <code>/api/summary</code> as read on 5 November 2026.
+</footer>
+
+</div>
+</body>
+</html>

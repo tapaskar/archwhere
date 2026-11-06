@@ -25,9 +25,10 @@
     "rail": {
       "name": "Rail & BYOA logic",
       "kind": "core",
-      "description": "Attention-rail categorisation, agent mention.",
+      "description": "Attention-rail categorisation, runtime signal grading, agent mention. Pure: no network, no fs.",
       "paths": [
-        "lib/rail.js"
+        "lib/rail.js",
+        "lib/signals.js"
       ],
       "deps": [
         "core"
