@@ -238,3 +238,23 @@ test('signing off is not offered on the board', () => {
   const src = require('fs').readFileSync(path.join(__dirname, '..', 'lib', 'mission.js'), 'utf8');
   assert.doesNotMatch(src, /pathname === '\/api\/signoff'/);
 });
+
+// The rail was driven entirely by GitHub labels, so a dead service could not rank beside a
+// blocked thread. That is what made a crash loop invisible on a board that was otherwise fine.
+test('the attention rail shows what runtime says is failing', () => {
+  const html = require('fs').readFileSync(path.join(__dirname, '..', 'ui', 'mission.html'), 'utf8');
+  const fn = html.match(/function railRuntime\(rb\)[\s\S]*?\n\}/);
+  assert.ok(fn, 'railRuntime present');
+
+  // It reads the attention list the server already computes in lib/signals.js.
+  assert.match(fn[0], /RUNTIME\.attention/);
+  // Failing components come before the GitHub sections.
+  const rail = html.match(/function renderRail\(\)[\s\S]*?for \(const sec of/);
+  assert.match(rail[0], /railRuntime\(rb\)/);
+  assert.ok(rail[0].indexOf('railRuntime') < rail[0].indexOf('const SECT'), 'failures rank first');
+  // Component names and reasons are escaped: failure names come from the user's own endpoint.
+  assert.match(fn[0], /esc\(name\)/);
+  assert.match(fn[0], /esc\(a\.why/);
+  // A new reading redraws the rail rather than waiting for the next state poll.
+  assert.match(html, /if \(STATE\) renderRail\(\);/);
+});

@@ -368,8 +368,33 @@ function railItem(it, sec) {
   return d;
 }
 
+/**
+ * Components the runtime says are failing, above the GitHub sections.
+ * The rail was label-driven only, so a dead service could not rank beside a blocked thread —
+ * the thing that made a crash loop invisible on a board that was otherwise working.
+ */
+function railRuntime(rb) {
+  const att = (RUNTIME && RUNTIME.available && RUNTIME.attention) || [];
+  if (!att.length) return;
+  const h = document.createElement('div'); h.className = 'sect'; h.style.color = '#B42318';
+  h.textContent = '🔺 FAILING NOW';
+  rb.appendChild(h);
+  for (const a of att) {
+    const d = document.createElement('div');
+    d.className = 'item';
+    d.style.borderLeftColor = { bad: '#B42318', warn: '#A86400', unknown: '#8a8f9b' }[a.status] || '#8a8f9b';
+    const name = (MODEL.components[a.id] || {}).name || a.id;
+    d.innerHTML = '<b>' + esc(name) + '</b> <span class="cc">' + esc(a.status) + '</span>'
+      + '<div class="meta">' + esc(a.why || '') + '</div>'
+      + (a.deploy && a.deploy.ref ? '<div class="meta">deployed ' + esc(a.deploy.ref) + '</div>' : '');
+    d.onclick = () => selectComponent(a.id);
+    rb.appendChild(d);
+  }
+}
+
 function renderRail() {
   const rb = $('#railbody'); rb.innerHTML = '';
+  railRuntime(rb);
   const SECT = { security: '🔴 SECURITY', blocked: '🟠 BLOCKED — needs your decision', attention: '🔵 PRs NEEDING ATTENTION', mergeable: '🟢 READY TO MERGE' };
   const COL = { security: '#C2410C', blocked: '#B45309', attention: '#2F4AC0', mergeable: '#0F7A5C' };
   for (const sec of ['security', 'blocked', 'attention', 'mergeable']) {
@@ -642,6 +667,7 @@ function ago(iso) {
 async function refreshRuntime() {
   try {
     RUNTIME = await j('/api/runtime');
+    if (STATE) renderRail();                 // a failure belongs in the rail as soon as it is read
     $('#rtnote').textContent = RUNTIME.available ? 'runtime from obs · refreshed ' + new Date().toLocaleTimeString() : 'Runtime unavailable: ' + RUNTIME.reason;
     for (const id of Object.keys(MODEL.components)) {
       const n = $('#n-' + id); if (!n) continue;
