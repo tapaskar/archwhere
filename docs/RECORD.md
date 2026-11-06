@@ -81,6 +81,11 @@ of the file. The file itself is still a file, and someone with disk access can c
 - A task's builder can't also be its reviewer.
 - A claim expires (default 30 minutes, at most 24 hours) unless renewed. Once it has expired, someone else can
   take over and the old holder can't renew it.
+- The same rules are applied when the log is **read**, not only when it is written, because an imported
+  segment can carry entries no local command checked. An update whose declared writer is not the holder is
+  refused, and so is a renewal reaching more than one ttl past the moment it was written. Both are listed
+  under the claim's `rejected`, never silently dropped. An `expires_at` that cannot be parsed counts as
+  expired rather than as never expiring.
 - Status: `active`, `expired`, `done`, `released`, `failed`.
 
 **Limits.** Claims are advisory: they coordinate agents that check them, and nothing stops a process from
