@@ -43,8 +43,8 @@ flowchart LR
 
 | Component | Kind | Provider | What it is | Owns |
 |---|---|---|---|---|
-| **Core mapper** | core |  | Model loading, glob mapping, renderers. | `lib/where.js` `bin/**` `lib/infer.js` |
-| **Rail & BYOA logic** | core |  | Attention-rail categorisation, agent mention. | `lib/rail.js` |
+| **Core mapper** | core |  | Model loading, glob mapping, renderers. | `lib/where.js` `bin/**` `lib/infer.js` `lib/collide.js` |
+| **Rail & BYOA logic** | core |  | Attention-rail categorisation, runtime signal grading, agent mention. Pure: no network, no fs. | `lib/rail.js` `lib/signals.js` |
 | **Attributed record** | core |  | Append-only hash-linked log: specs, decisions, findings, corrections, reviews, claims, owner sign-offs, independent-review check. | `lib/record.js` `lib/record-cli.js` `lib/claims.js` `lib/signoff.js` `lib/review.js` |
 | **MCP server** | product | MCP over stdio | archwhere mcp: hand-written JSON-RPC over stdio. Read-only unless --write. No merge or shell tool. | `lib/mcp.js` |
 | **Mission control** | product | Node http · localhost | Local UI server + page, and the bridge that lets CLI agents answer board threads. | `lib/mission.js` `lib/bridge.js` `lib/gh.js` `ui/**` |
