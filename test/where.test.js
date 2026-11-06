@@ -192,3 +192,49 @@ test('the record panel escapes everything and never implies proven identity', ()
   // A record that does not verify shows nothing derived.
   assert.match(src, /if \(!d\.ok\)/);
 });
+
+// The decision button is the one place the mission server writes to the record rather than to
+// GitHub. These pin the properties that make that acceptable.
+test('a decision is attributed to the token holder, not to the browser', () => {
+  const src = require('fs').readFileSync(path.join(__dirname, '..', 'lib', 'mission.js'), 'utf8');
+  const route = src.match(/u\.pathname === '\/api\/decision'[\s\S]*?\n      \}/);
+  assert.ok(route, 'the decision route is present');
+  const r = route[0];
+
+  // The author comes from whoami(), never from the request body.
+  assert.match(r, /const who = await whoami\(\)/);
+  assert.match(r, /author: who/);
+  assert.doesNotMatch(r, /author:\s*(?:body|draft|req)/, 'the browser must not name the author');
+  // No identity means no entry: an unattributed decision is worthless.
+  assert.match(r, /if \(!who\)/);
+  // It is a person's decision made through the board, and the record says both.
+  assert.match(r, /actor: 'human'/);
+  assert.match(r, /via: 'board'/);
+  // The secret gate surfaces as a refusal with no override.
+  assert.match(r, /code === 'secret'/);
+  // No second attempt after a refusal: the route writes once and returns.
+  assert.strictEqual((r.match(/R\.put\(/g) || []).length, 1, 'the route writes at most once');
+});
+
+test('the decision form never pre-fills itself from the thread', () => {
+  // Thread comments come from anyone. A decision carrying someone else's words under the token
+  // holder's name is not a decision they made.
+  const html = require('fs').readFileSync(path.join(__dirname, '..', 'ui', 'mission.html'), 'utf8');
+  const fn = html.match(/function decisionForm\(component\)[\s\S]*?\n\}/);
+  assert.ok(fn, 'decisionForm present');
+  assert.doesNotMatch(fn[0], /\.value\s*=\s*(?:t\.|p\.|it\.|STATE)/, 'nothing is pre-filled from state');
+  // A refusal keeps what the user typed.
+  assert.match(fn[0], /nothing was written/);
+  // The catch itself must not clear the inputs, so a refusal leaves the user's words in place.
+  const katch = fn[0].match(/catch \(e\) \{[\s\S]*?\n    \}/);
+  assert.ok(katch, 'the form handles failure');
+  assert.doesNotMatch(katch[0], /\.value\s*=\s*''/, 'a refusal must not erase what was typed');
+});
+
+test('signing off is not offered on the board', () => {
+  // passphrase-on-TTY is what makes human-signed mean anything; a button cannot carry that.
+  const html = require('fs').readFileSync(path.join(__dirname, '..', 'ui', 'mission.html'), 'utf8');
+  assert.doesNotMatch(html, /api\/signoff|record signoff|sign-off button/i);
+  const src = require('fs').readFileSync(path.join(__dirname, '..', 'lib', 'mission.js'), 'utf8');
+  assert.doesNotMatch(src, /pathname === '\/api\/signoff'/);
+});

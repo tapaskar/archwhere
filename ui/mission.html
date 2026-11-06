@@ -99,6 +99,15 @@
   .rec .fix { font-size:11px; color:#595f6e; margin-top:3px; padding-left:8px; border-left:2px solid #CFE3D8; }
   .rec .none { color:#8a8f9b; }
   .rec .bad { color:#B42318; }
+  .dec { margin-top:10px; border-top:1px solid #F0EFEB; padding-top:8px; }
+  .dec textarea { width:100%; border:1px solid #E3E3DE; border-radius:6px; padding:6px 8px; font:inherit; font-size:12px; resize:vertical; }
+  .dec input { width:100%; border:1px solid #E3E3DE; border-radius:6px; padding:5px 8px; font:inherit; font-size:12px; margin-bottom:5px; }
+  .dec .row { display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .dec button { background:#1F2433; color:#FFF7EE; border:0; border-radius:6px; padding:5px 12px; font:inherit; font-size:12px; cursor:pointer; }
+  .dec button:disabled { opacity:.5; cursor:default; }
+  .dec .msg { font-size:11px; }
+  .dec .msg.err { color:#B42318; }
+  .dec .msg.ok { color:#1E7A46; }
   .ghost { background:none; border:0; color:#2F4AC0; font-size:11.5px; cursor:pointer; padding:0; }
   a { color:#2F4AC0; }
   #systemflow { display:none; }
@@ -437,7 +446,45 @@ function recordPanel(d) {
   h += '<div class="prov">' + esc(d.provenance.from) + ' · ' + esc(d.provenance.segments)
      + ' segment(s) · ' + esc(d.provenance.note) + '</div>';
   el.innerHTML = h;
+  el.appendChild(decisionForm(d.component));
   return el;
+}
+
+/**
+ * Write a decision to the record. Deliberately plain: the user types it.
+ * Nothing is pre-filled from the thread — comments come from anyone, and a decision carrying
+ * text someone else wrote, under the token holder's name, is not a decision they made.
+ */
+function decisionForm(component) {
+  const box = document.createElement('div'); box.className = 'dec';
+  const h = document.createElement('h4'); h.textContent = 'Record a decision';
+  const title = document.createElement('input');
+  title.placeholder = 'What was decided'; title.setAttribute('aria-label', 'Decision');
+  const body = document.createElement('textarea');
+  body.rows = 2; body.placeholder = 'Why, in your own words'; body.setAttribute('aria-label', 'Reason');
+  const row = document.createElement('div'); row.className = 'row';
+  const go = document.createElement('button'); go.type = 'button'; go.textContent = 'Record';
+  const msg = document.createElement('span'); msg.className = 'msg';
+  row.append(go, msg);
+  box.append(h, title, body, row);
+
+  go.onclick = async () => {
+    if (!title.value.trim()) { msg.className = 'msg err'; msg.textContent = 'a decision needs a title'; return; }
+    go.disabled = true; msg.className = 'msg'; msg.textContent = 'writing…';
+    try {
+      const r = await j('/api/decision', { method: 'POST',
+        body: JSON.stringify({ component, title: title.value, body: body.value }) });
+      msg.className = 'msg ok';
+      msg.textContent = 'recorded as ' + String(r.hash).slice(0, 12) + ' by ' + r.author;
+      title.value = ''; body.value = '';
+      showComponentRecord(component, $('#plist'));
+    } catch (e) {
+      // The text stays in the box. There is no write-anyway.
+      msg.className = 'msg err';
+      msg.textContent = String(e.message || 'not written') + ' — nothing was written';
+    } finally { go.disabled = false; }
+  };
+  return box;
 }
 
 /** Fetched per component, after the panel is on screen, so a missing record never blocks it. */
