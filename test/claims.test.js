@@ -131,7 +131,9 @@ function reviewed(reviewer = gpt(), verdict = 'approve', extra = {}) {
   const d = tmp();
   C.claim(d, agent('b1'), { task: 'T-1', role: 'builder' });
   R.put(d, agent('b1'), { type: 'work', task: 'T-1', commit: 'abcdef1' });
-  R.put(d, reviewer, { type: 'review', task: 'T-1', verdict, ...extra });
+  // The review names the commit it looked at. Without one it no longer certifies, and these
+  // tests are about vendor and model independence, not about what the review pointed at.
+  R.put(d, reviewer, { type: 'review', task: 'T-1', verdict, commit: 'abcdef1', ...extra });
   return d;
 }
 const check = (d, q = { task: 'T-1' }) => V.independent(R.load(d).entries, q);
@@ -301,4 +303,44 @@ test('a renewal within the cap is honoured', () => {
   const f = C.foldClaims(entries, Date.parse('2026-11-06T02:00:00Z'));
   assert.strictEqual(f.all[0].status, 'active');
   assert.ok(!f.all[0].rejected);
+});
+
+// Kiro on #17: `commit` is optional on a review, so a review need never say what it reviewed.
+// The staleness rule only catches this when work was recorded afterwards — a push nobody wrote
+// a `work` entry for would leave the review certifying for ever.
+const work1 = { type: 'work', hash: 'w1', task: 'T-1', commit: 'aaa1111',
+  author: 'b', agent: 'b1', model: 'claude-opus-5', vendor: 'anthropic', ts: '2026-11-06T00:00:00Z' };
+const reviewer = { author: 'r', agent: 'r1', model: 'gpt-5', vendor: 'openai' };
+
+test('a task review that names no commit cannot certify', () => {
+  const entries = [work1,
+    { type: 'review', hash: 'v1', task: 'T-1', verdict: 'approve', ts: '2026-11-06T01:00:00Z', ...reviewer }];
+  const out = V.independent(entries, { task: 'T-1' });
+  assert.strictEqual(out.ok, false);
+  assert.ok(out.reviews[0].why.some(w => /does not say what it reviewed/.test(w)));
+});
+
+test('naming the commit is enough', () => {
+  const entries = [work1,
+    { type: 'review', hash: 'v1', task: 'T-1', verdict: 'approve', commit: 'aaa1111',
+      ts: '2026-11-06T01:00:00Z', ...reviewer }];
+  assert.strictEqual(V.independent(entries, { task: 'T-1' }).ok, true);
+});
+
+test('a review aimed at a specific entry is already specific, commit or not', () => {
+  // --target names one entry by hash, so there is no ambiguity about what was looked at.
+  const H = 'aaaaaaaabbbbbbbbccccccccdddddddd';      // mustFind wants 8-64 hex characters
+  const entries = [
+    { ...work1, hash: H },
+    { type: 'review', hash: 'eeeeeeeeffffffff', target: H, verdict: 'approve',
+      ts: '2026-11-06T01:00:00Z', ...reviewer }];
+  assert.strictEqual(V.independent(entries, { target: H }).ok, true);
+});
+
+test('asking about a particular commit still reports the mismatch, not the missing-commit reason', () => {
+  const entries = [work1,
+    { type: 'review', hash: 'v1', task: 'T-1', verdict: 'approve', ts: '2026-11-06T01:00:00Z', ...reviewer }];
+  const why = V.independent(entries, { task: 'T-1', commit: 'bbb2222' }).reviews[0].why;
+  assert.ok(why.some(w => /not bbb2222/.test(w)));
+  assert.ok(!why.some(w => /does not say what it reviewed/.test(w)), 'one reason, not two');
 });
