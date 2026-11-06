@@ -86,6 +86,19 @@
   .cdet .chip { display:inline-block; border:1px solid #D5D5CF; border-radius:10px; padding:1px 8px; margin:2px 3px 0 0; cursor:pointer; font-size:11px; }
   .cdet .chip:hover { border-color:#1F2433; }
   .cdet .st-ok { color:#1E7A46; } .cdet .st-warn { color:#A86400; } .cdet .st-bad { color:#B42318; }
+  /* What the record says about this component. Everything in it is written by agents with
+     self-declared identity, so it is rendered as escaped text and labelled declared. */
+  .rec { border:1.3px solid #E3E3DE; border-radius:8px; padding:10px 12px; font-size:12px; margin-bottom:10px; background:#fff; }
+  .rec h4 { margin:8px 0 3px; font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:#6b7180; }
+  .rec .prov { font-size:10.5px; color:#8a8f9b; margin-top:8px; border-top:1px solid #F0EFEB; padding-top:6px; }
+  .rec .item { border-left:2px solid #E3E3DE; padding:2px 0 2px 8px; margin:6px 0; }
+  .rec .item.corrected { border-left-color:#C9C9C4; opacity:.75; }
+  .rec .t { font-weight:600; color:#1F2433; }
+  .rec .by { font-size:10.5px; color:#8a8f9b; }
+  .rec .by .decl { border:1px solid #D5D5CF; border-radius:8px; padding:0 5px; margin-left:4px; }
+  .rec .fix { font-size:11px; color:#595f6e; margin-top:3px; padding-left:8px; border-left:2px solid #CFE3D8; }
+  .rec .none { color:#8a8f9b; }
+  .rec .bad { color:#B42318; }
   .ghost { background:none; border:0; color:#2F4AC0; font-size:11.5px; cursor:pointer; padding:0; }
   a { color:#2F4AC0; }
   #systemflow { display:none; }
@@ -387,6 +400,55 @@ function componentDetails(id) {
   return el;
 }
 
+/**
+ * What the record says about this component. Record text is written by agents with self-declared
+ * identity, so every value goes in as escaped text and every entry carries who declared it.
+ */
+function recordPanel(d) {
+  const el = document.createElement('div'); el.className = 'rec';
+  const by = x => '<span class="by">' + esc([x.author, x.agent, x.model, x.vendor].filter(Boolean).join(' · '))
+    + (x.declared ? '<span class="decl">declared</span>' : '') + '</span>';
+
+  if (!d.ok) {
+    el.innerHTML = '<h4>Record</h4><span class="bad">' + esc(d.reason || 'nothing shown') + '</span>'
+      + (d.problems && d.problems.length ? '<div class="by">' + d.problems.map(esc).join('<br>') + '</div>' : '');
+    if (d.provenance) el.innerHTML += '<div class="prov">' + esc(d.provenance.note || '') + '</div>';
+    return el;
+  }
+
+  let h = '<h4>Spec</h4>';
+  h += d.specs.length
+    ? d.specs.map(sp => '<div class="item"><span class="t">' + esc(sp.name) + '</span> '
+        + '<span class="by">v' + esc(sp.version) + ' · ' + esc(String(sp.sha256 || '').slice(0, 12)) + '</span>'
+        + (sp.forked ? ' <span class="bad">forked in ' + esc(sp.forked.length) + ' clones</span>' : '')
+        + '<div>' + by(sp) + '</div></div>').join('')
+    : '<span class="none">' + esc(d.specsEmpty || 'none') + '</span>';
+
+  h += '<h4>Findings</h4>';
+  h += d.findings.length
+    ? d.findings.map(f => '<div class="item' + (f.corrected ? ' corrected' : '') + '">'
+        + '<span class="t">' + esc(f.title) + '</span>'
+        + (f.corrected ? ' <span class="by">corrected</span>' : '')
+        + '<div>' + by(f) + '</div>'
+        + f.corrections.map(c => '<div class="fix">' + esc(c.body) + '<div>' + by(c) + '</div></div>').join('')
+        + '</div>').join('')
+    : '<span class="none">no findings in this record</span>';
+
+  h += '<div class="prov">' + esc(d.provenance.from) + ' · ' + esc(d.provenance.segments)
+     + ' segment(s) · ' + esc(d.provenance.note) + '</div>';
+  el.innerHTML = h;
+  return el;
+}
+
+/** Fetched per component, after the panel is on screen, so a missing record never blocks it. */
+async function showComponentRecord(id, list) {
+  try {
+    const d = await j('/api/component-record?component=' + encodeURIComponent(id));
+    if (sel.component !== id) return;                 // the user moved on while this was in flight
+    list.appendChild(recordPanel(d));
+  } catch (_) { /* no record here: the rest of the panel still stands */ }
+}
+
 function selectComponent(id) {
   sel = { component: id, thread: null, pr: null, mode: 'list' };
   document.querySelectorAll('.node').forEach(n => n.classList.toggle('sel', n.id === 'n-' + id));
@@ -396,6 +458,7 @@ function selectComponent(id) {
   const list = $('#plist'); list.style.display = 'block'; $('#thread').style.display = 'none';
   list.innerHTML = '';
   list.appendChild(componentDetails(id));
+  showComponentRecord(id, list);
   const threads = STATE ? STATE.threads.filter(t => t.components.includes(id)) : [];
   const prs = STATE ? STATE.prs.filter(p => p.components.includes(id)) : [];
   for (const t of threads) {
