@@ -214,3 +214,38 @@ test('a human can review an agent, but not their own work, and the note warns it
   R.put(d, { actor: 'human', author: 'dana' }, { type: 'review', target: own.hash, verdict: 'approve' });
   assert.strictEqual(check(d, { target: own.hash }).ok, false);
 });
+
+// Both found by Kiro reviewing #17 through the bridge, and reproduced before fixing.
+test('a claim whose expiry cannot be read is not a live claim', () => {
+  // Date.parse('not-a-date') is NaN and `NaN <= now` is false, so this claim stayed active
+  // for ever. An unreadable expiry is not a licence to hold a task indefinitely.
+  const e = [{ type: 'claim', hash: 'h1', task: 'T1', role: 'builder', agent: 'a1',
+               claim_id: 'c1', expires_at: 'not-a-date', ts: '2026-11-06T00:00:00Z' }];
+  const f = C.foldClaims(e, Date.parse('2027-01-01T00:00:00Z'));
+  assert.deepStrictEqual(f.active, []);
+  assert.strictEqual(f.all[0].status, 'expired');
+});
+
+test('a readable expiry still governs normally', () => {
+  const e = [{ type: 'claim', hash: 'h1', task: 'T1', role: 'builder', agent: 'a1',
+               claim_id: 'c1', expires_at: '2026-11-06T01:00:00Z', ts: '2026-11-06T00:00:00Z' }];
+  assert.strictEqual(C.foldClaims(e, Date.parse('2026-11-06T00:30:00Z')).active.length, 1);
+  assert.strictEqual(C.foldClaims(e, Date.parse('2026-11-06T02:00:00Z')).active.length, 0);
+});
+
+test('a reviewer who approves then asks for changes has not approved', () => {
+  // Only the newest verdict per reviewer counts. Otherwise a stale approve outlives the
+  // objection that replaced it, and `record independent` certifies work that was rejected.
+  const mk = (hash, verdict) => ({ type: 'review', hash, task: 'T-9', verdict, commit: 'abc1234',
+    author: 'rev', agent: 'r1', model: 'gpt-5', vendor: 'openai', ts: '2026-11-06T00:00:0' + hash.slice(-1) + 'Z' });
+  const entries = [
+    { type: 'work', hash: 'w1', task: 'T-9', commit: 'abc1234',
+      author: 'builder', agent: 'b1', model: 'claude-opus-5', vendor: 'anthropic', ts: '2026-11-06T00:00:00Z' },
+    mk('r1', 'approve'),
+    mk('r2', 'changes'),
+  ];
+  const out = V.independent(entries, { task: 'T-9', commit: 'abc1234' });
+  assert.strictEqual(out.ok, false, 'a superseded approve must not certify the work');
+  const stale = out.reviews.find(r => r.hash === 'r1');
+  assert.ok(stale.why.some(w => /superseded/.test(w)), 'says why it no longer counts');
+});
