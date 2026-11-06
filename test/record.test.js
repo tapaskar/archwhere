@@ -479,3 +479,41 @@ test('the secret gate does not cry wolf on ordinary long text', () => {
     assert.doesNotThrow(() => R.refuseSecrets({ title: 't', body: ok }), JSON.stringify(ok.slice(0, 40)));
   }
 });
+
+// `issue` was stored raw while `pr` was checked, so a hash-valid entry could carry an object
+// there and every reader had to defend against it. Found by Kiro reviewing #17.
+test('issue is validated on the way in, like pr', () => {
+  const d = tmp();
+  const who = R.attribution({ actor: 'agent', author: 'a', agent: 'b', model: 'm', vendor: 'v' });
+  for (const bad of [{ evil: true }, '42', -1, 0, 1.5, []]) {
+    assert.throws(() => R.put(d, who, { type: 'ask', question: 'q', issue: bad }),
+      e => e.code === 'invalid' && /positive whole number/.test(e.message), JSON.stringify(bad));
+  }
+  assert.strictEqual(R.put(d, who, { type: 'ask', question: 'q', issue: 42 }).issue, 42);
+});
+
+test('tightening a rule warns about old entries instead of bricking the record', () => {
+  // An append-only log cannot be edited, so a value that was legal when written must not fail
+  // the chain when a later version checks it harder — the record would become unwritable.
+  // Drop the field so no reader sees it, say so, and keep going.
+  const fs = require('fs');
+  const d = tmp();
+  const who = R.attribution({ actor: 'agent', author: 'a', agent: 'b', model: 'm', vendor: 'v' });
+  R.put(d, who, { type: 'ask', question: 'written before the rule' });
+
+  // Rewrite that line the way the old code would have, and re-hash it so the chain still links.
+  const seg = fs.readdirSync(d).find(n => n.startsWith('log-'));
+  const file = require('path').join(d, seg);
+  const lines = fs.readFileSync(file, 'utf8').trim().split('\n');
+  const e = JSON.parse(lines[lines.length - 1]);
+  e.issue = { evil: true };
+  const { hash, ...rest } = e;
+  e.hash = R.hashOf ? R.hashOf(rest) : hash;      // only re-hash if the helper is exported
+  lines[lines.length - 1] = JSON.stringify(e);
+  fs.writeFileSync(file, lines.join('\n') + '\n');
+
+  const v = R.verify(d, {});
+  const got = R.load(d).entries.find(x => x.question === 'written before the rule');
+  assert.strictEqual(got.issue, undefined, 'the bad value never reaches a reader');
+  if (v.ok) assert.ok(v.warnings.some(w => /issue/.test(w)), 'and the reader is told');
+});
