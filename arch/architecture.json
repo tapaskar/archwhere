@@ -47,7 +47,9 @@
         "lib/review.js"
       ],
       "deps": [
-        "core"
+        "core",
+        "mission",
+        "rail"
       ]
     },
     "mcp": {

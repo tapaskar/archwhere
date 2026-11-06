@@ -19,6 +19,8 @@ flowchart LR
   rail --> core
   rail --> merge-gate
   record --> core
+  record --> mission
+  record --> rail
   mcp --> core
   mcp --> rail
   mcp --> record
