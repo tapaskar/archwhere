@@ -147,14 +147,19 @@ and put `arch/` and `.github/` in `CODEOWNERS`.
   PRs ready to merge (the Merge button uses *your* token; agents never merge).
 - **Click any component → open a thread.** Threads are GitHub issues labelled
   `component:<id>` (auto-created). Your agent answers; the reply appears on the map.
-- **Six lenses** — Structure / Changes / Heat / Runtime / System flow / Record.
-  **Heat** colours components by git churn over the last 30 days — where your
-  agents are actually spending effort. **Runtime** colours them by live health
-  from any endpoint you point `RUNTIME_URL` at (see below).
+- **One surface, no tabs.** The rail, the map and the thread are all on screen at
+  once. Open PRs, alerts and each component's live health show together, so
+  "this one is red *and* has an open PR" is a glance, not two clicks.
+- **Health or Heat**, as a toggle over the same cards. **Health** comes from any
+  endpoint you point `RUNTIME_URL` at (see below); a component that reports
+  nothing reads `unknown` — dashed and dimmed, never green. **Heat** colours by
+  git churn over the last 30 days: where your agents are actually spending effort.
+- **Two drawers** under the map, for the things you consult rather than watch.
   **System flow** draws the Mermaid system map, with components that have an open
-  PR highlighted, and every process flow in your model as a sequence diagram.
-  It fetches Mermaid 11 from jsDelivr when opened, pinned by hash.
-  **Record** shows, read-only, whether the [shared record](docs/RECORD.md) verifies, active claims and the latest entries.
+  PR highlighted, and every process flow in your model as a sequence diagram; it
+  fetches Mermaid 11 from jsDelivr the first time you open it, pinned by hash.
+  **Record** shows, read-only, whether the [shared record](docs/RECORD.md)
+  verifies, active claims and the latest entries.
 
 ### The runtime contract
 
