@@ -76,7 +76,8 @@
         "lib/mission.js",
         "lib/bridge.js",
         "lib/gh.js",
-        "ui/**"
+        "ui/**",
+        "lib/brief.js"
       ],
       "deps": [
         "core",
