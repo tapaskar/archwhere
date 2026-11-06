@@ -138,3 +138,31 @@ test('the board is one surface, not a stack of lenses', () => {
   // Three zones, all visible at once.
   for (const id of ['rail', 'map', 'panel']) assert.match(html, new RegExp('id="' + id + '"'));
 });
+
+// mission.js called execFileSync without requiring child_process. The ReferenceError landed in a
+// catch commented "not a git checkout", so `tracked` was always empty — and merge.js feeds it to
+// Guard.modelWeakenings, so the board's merge gate judged a glob change against the PR's own files
+// only. The trap was a catch that swallows a programming error as though it were an expected one.
+test('mission.js lists tracked files instead of silently listing none', () => {
+  const src = require('fs').readFileSync(path.join(__dirname, '..', 'lib', 'mission.js'), 'utf8');
+  if (/\bexecFileSync\s*\(/.test(src)) {            // a call, not the word in a comment
+    assert.match(src, /require\(['"]child_process['"]\)/,
+      'mission.js calls execFileSync, so it must require child_process');
+  }
+  const I = require('../lib/infer');
+  assert.ok(I.trackedFiles(path.join(__dirname, '..')).length > 10,
+    'trackedFiles returned nothing in a git checkout');
+});
+
+test('no catch in lib/ is completely empty', () => {
+  // A catch with a body or a comment is a decision. An empty one hides whatever went wrong,
+  // which is exactly how a ReferenceError passed for "not a git checkout" here.
+  const fs = require('fs');
+  const dir = path.join(__dirname, '..', 'lib');
+  const empty = [];
+  for (const f of fs.readdirSync(dir).filter(n => n.endsWith('.js'))) {
+    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+    for (const m of src.matchAll(/catch\s*(?:\([^)]*\))?\s*\{\s*\}/g)) empty.push(f);
+  }
+  assert.deepStrictEqual(empty, []);
+});
