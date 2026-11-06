@@ -15,6 +15,10 @@
 - **`record signoff`**: an Ed25519 owner sign-off, with a passphrase from the terminal only.
 - **`record anchor`**: publishes the head hash in a git tag or GitHub comment, and `record verify` checks it.
 - **Record lens** in mission control and `GET /api/record`, both read-only.
+### Security
+- The example Kiro agent could read any file the user can, because pre-approving a tool skips its
+  path limits. It's now limited to the working directory; re-copy it, and drop `--trust-tools` from
+  your bridge `--cmd`.
 
 ## 1.0.0 — 2026-11-04
 

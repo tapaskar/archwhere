@@ -1,10 +1,25 @@
 {
   "name": "archwhere-readonly",
-  "description": "Read-only code Q&A for archwhere bridge: can read files; cannot write, run shell commands, or use AWS/MCP tools.",
+  "description": "Read-only code Q&A for archwhere bridge: can read files inside the working directory only; cannot write, run shell commands, or use AWS/MCP tools.",
   "prompt": "You answer questions about the repository in the current directory. You are read-only: never modify files and never run commands. Be concise and use plain English.",
-  "tools": ["fs_read"],
-  "allowedTools": ["fs_read"],
+  "tools": [
+    "read"
+  ],
+  "allowedTools": [],
   "mcpServers": {},
   "includeMcpJson": false,
-  "resources": []
+  "resources": [],
+  "toolsSettings": {
+    "read": {
+      "allowedPaths": [
+        "./**"
+      ],
+      "deniedPaths": [
+        "**/.env",
+        "**/.env.*",
+        "**/*.pem",
+        "**/*credentials*"
+      ]
+    }
+  }
 }

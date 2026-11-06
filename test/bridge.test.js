@@ -188,3 +188,12 @@ test('parseBridgeArgs', () => {
   assert.strictEqual(a.mention, '@kiro'); assert.strictEqual(a.interval, 10); assert.strictEqual(a.timeout, 300);
   assert.ok(a.once); assert.strictEqual(a.allow, 'a,b');
 });
+
+test('the example Kiro agent stays limited to its working directory', () => {
+  const a = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, '..', 'examples', 'kiro', 'archwhere-readonly.json'), 'utf8'));
+  assert.deepStrictEqual(a.tools, ['read']);
+  assert.deepStrictEqual(a.allowedTools, [], 'pre-approving a tool skips its path limits');
+  assert.deepStrictEqual(a.toolsSettings.read.allowedPaths, ['./**']);
+  assert.ok(a.toolsSettings.read.deniedPaths.includes('**/.env'));
+  assert.deepStrictEqual(a.mcpServers, {});
+});
