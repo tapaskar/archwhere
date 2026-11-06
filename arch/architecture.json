@@ -45,7 +45,8 @@
         "lib/claims.js",
         "lib/signoff.js",
         "lib/review.js",
-        "lib/component-view.js"
+        "lib/component-view.js",
+        "lib/work-state.js"
       ],
       "deps": [
         "core",

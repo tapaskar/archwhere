@@ -17,6 +17,16 @@
   .wrap { display:flex; gap:14px; padding:14px 20px; align-items:flex-start; }
   /* System flow and the Record are reference, consulted rarely and expensive to draw: drawers,
      loaded on open, not tabs that replace the map. */
+  /* Work state: counts per column, derived on every read. A chip says how it is known —
+     proved (chain or signature), declared (an agent said so), observed (GitHub). */
+  .work { display:grid; gap:6px; grid-template-columns:repeat(6,minmax(0,1fr)); margin-bottom:14px; }
+  @media (max-width:760px){ .work { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+  .work .col { background:#fff; border:1px solid #E3E3DE; border-radius:7px; padding:6px 8px; }
+  .work .cn { font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:#8a8f9b; display:block; }
+  .work .cv { font-size:18px; font-weight:600; color:#1F2433; }
+  .work .cw { font-size:10px; color:#8a8f9b; }
+  .work .cw b { font-weight:600; }
+  .worknote { font-size:11px; color:#8a8f9b; margin-bottom:10px; }
   .drawer { border-top:1px solid #E3E3DE; margin-top:14px; padding-top:10px; }
   .drawer summary { cursor:pointer; font-size:12.5px; font-weight:600; color:#1F2433; }
   .drawer summary:focus-visible { outline:2px solid #1F6F6B; outline-offset:2px; }
@@ -134,7 +144,9 @@
 <div class="wrap">
   <div id="rail"><h2>NEEDS YOUR ATTENTION</h2><div id="railbody">loading…</div></div>
   <div id="map">
-    <div id="rtnote"></div><div id="heatnote"></div><div id="lanes"></div>
+    <div id="rtnote"></div><div id="heatnote"></div>
+    <div id="work" class="work"></div><div id="worknote" class="worknote"></div>
+    <div id="lanes"></div>
     <details id="dflow" class="drawer"><summary>System flow</summary><div id="systemflow"></div></details>
     <details id="drecord" class="drawer"><summary>Record</summary><div id="recordview"></div></details>
   </div>
@@ -664,6 +676,39 @@ function ago(iso) {
   return h < 48 ? h + ' h ago' : Math.round(h / 24) + ' d ago';
 }
 
+/**
+ * Counts per column, with the strongest way each is known. The word matters: "declared" means an
+ * agent said so about itself, and the board must never let that read as something that was checked.
+ */
+async function refreshWork() {
+  try {
+    const d = await j('/api/work-state');
+    const box = $('#work'); box.innerHTML = '';
+    const LABEL = { proposed: 'Proposed', claimed: 'Claimed', 'in-pr': 'In PR',
+                    reviewed: 'Reviewed', 'signed-off': 'Signed off', merged: 'Merged' };
+    const RANK = { proved: 3, observed: 2, declared: 1 };
+    for (const col of d.columns) {
+      const n = d.counts[col] || 0;
+      // The strongest evidence behind any card in this column, so the word is not a guess.
+      let best = null;
+      for (const c of d.cards) {
+        const h = c.column === col && c.how && c.how[col];
+        if (h && (!best || RANK[h] > RANK[best])) best = h;
+      }
+      const el = document.createElement('div'); el.className = 'col';
+      el.innerHTML = '<span class="cn">' + esc(LABEL[col] || col) + '</span>'
+        + '<span class="cv">' + esc(n) + '</span>'
+        + '<span class="cw">' + (n && best ? '<b>' + esc(best) + '</b>' : '&nbsp;') + '</span>';
+      box.appendChild(el);
+    }
+    const stale = d.cards.filter(c => c.stale).length;
+    $('#worknote').textContent = [
+      d.note || '',
+      stale ? stale + ' card(s) on a commit nothing in the record covers' : '',
+    ].filter(Boolean).join(' · ');
+  } catch (e) { $('#worknote').textContent = 'work state unavailable: ' + e.message; }
+}
+
 async function refreshRuntime() {
   try {
     RUNTIME = await j('/api/runtime');
@@ -715,6 +760,7 @@ async function refreshHeat() {
   renderAsk();
   await refreshState();
   refreshRuntime(); // load health once so component details can show it
+  refreshWork();
   setInterval(refreshState, 30000);
   // Keep the open conversation live: new and edited replies show without re-opening the thread.
   setInterval(() => {
