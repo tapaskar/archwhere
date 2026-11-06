@@ -81,9 +81,11 @@ test('systemFlow: the map marks touched components, and a model without flows is
   assert.deepStrictEqual(W.systemFlow({ components: { a: { name: 'A', kind: 'core' } } }).flows, []);
 });
 
-test('the System flow lens loads Mermaid pinned by hash, in strict mode, only when opened', () => {
+test('the System flow drawer loads Mermaid pinned by hash, in strict mode, only when opened', () => {
   const html = require('fs').readFileSync(path.join(__dirname, '..', 'ui', 'mission.html'), 'utf8');
-  assert.match(html, /<button data-l="flow">System flow<\/button>/);
+  // The flow is a drawer now, not a tab: it must still be opt-in, and still load nothing until asked.
+  assert.match(html, /<details id="dflow"[^>]*>\s*<summary>System flow<\/summary>/);
+  assert.match(html, /#dflow'\)\.addEventListener\('toggle'/, 'loaded on open, not at start');
   assert.match(html, /MERMAID_SRI = 'sha384-[A-Za-z0-9+\/=]+'/);
   assert.match(html, /securityLevel: 'strict'/);
   assert.doesNotMatch(html, /<script src=/, 'not loaded until the lens opens');
@@ -108,4 +110,31 @@ test('the board names archwhere, not only the system it is pointed at', () => {
   const sets = html.match(/\$?\(?'#htitle'\)?[^\n]*textContent\s*=\s*[^\n]*/g) || [];
   assert.strictEqual(sets.length, 1, 'exactly one place writes the heading');
   assert.doesNotMatch(sets[0], /archwhere/, 'the heading carries the system; the wordmark is static');
+});
+
+// The board was six lenses: Structure / Changes / Heat / Runtime / System flow / Record. Each was
+// a different way of looking at the same map, so every question cost a tab change and the answer
+// never sat beside the thing you would do about it. One surface now: rail, map, thread.
+test('the board is one surface, not a stack of lenses', () => {
+  const html = require('fs').readFileSync(path.join(__dirname, '..', 'ui', 'mission.html'), 'utf8');
+
+  assert.doesNotMatch(html, /data-lens|data-l="/, 'no lens switching left');
+  for (const gone of ['Structure', 'Changes', 'Runtime']) {
+    assert.doesNotMatch(html, new RegExp('<button[^>]*>' + gone), gone + ' is no longer a tab');
+  }
+
+  // What replaced them: one toggle over the same cards.
+  assert.match(html, /<button data-m="health"[^>]*class="on"/);
+  assert.match(html, /<button data-m="heat"/);
+  assert.match(html, /document\.body\.dataset\.metric = b\.dataset\.m/);
+
+  // Badges, alerts and the metric line used to be revealed by a lens; they are always on now.
+  for (const sel of ['\\.node \\.m \\{', '\\.badge \\{', '\\.alert \\{']) {
+    const rule = html.match(new RegExp('^\\s*' + sel + '[^}]*\\}', 'm'));
+    assert.ok(rule, sel + ' rule present');
+    assert.doesNotMatch(rule[0], /display:\s*none/, sel + ' must not start hidden');
+  }
+
+  // Three zones, all visible at once.
+  for (const id of ['rail', 'map', 'panel']) assert.match(html, new RegExp('id="' + id + '"'));
 });

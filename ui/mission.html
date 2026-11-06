@@ -15,6 +15,12 @@
   .lens button { font-size:12.5px; padding:5px 13px; border-radius:7px; color:#C0BCBA; background:none; border:0; cursor:pointer; }
   .lens button.on { background:#F7B32B; color:#1F2433; font-weight:700; }
   .wrap { display:flex; gap:14px; padding:14px 20px; align-items:flex-start; }
+  /* System flow and the Record are reference, consulted rarely and expensive to draw: drawers,
+     loaded on open, not tabs that replace the map. */
+  .drawer { border-top:1px solid #E3E3DE; margin-top:14px; padding-top:10px; }
+  .drawer summary { cursor:pointer; font-size:12.5px; font-weight:600; color:#1F2433; }
+  .drawer summary:focus-visible { outline:2px solid #1F6F6B; outline-offset:2px; }
+  .drawer #systemflow, .drawer #recordview { display:block; margin-top:10px; }
   /* rail */
   #rail { width:330px; flex-shrink:0; background:#fff; border:1px solid #DDD; border-radius:12px; padding:12px; max-height:calc(100vh - 100px); overflow:auto; }
   #rail h2 { font-size:12px; letter-spacing:1px; color:#8A8A8A; margin-bottom:8px; }
@@ -37,28 +43,24 @@
   .lane > b { position:absolute; top:-9px; left:14px; background:#fff; padding:0 8px; font-size:10.5px; color:#8A8A8A; letter-spacing:1px; }
   .node { position:relative; width:172px; min-height:64px; border-radius:9px; border:1.6px solid; background:#fff; padding:7px 10px; cursor:pointer; }
   .node .t { font-size:12.5px; font-weight:600; } .node .s { font-size:10px; color:#6b7180; display:block; }
-  .node .m { font-size:10.5px; color:#595f6e; margin-top:4px; line-height:1.45; display:none; }
-  body[data-lens="runtime"] .node .m { display:block; }
+  .node .m { font-size:10.5px; color:#595f6e; margin-top:4px; line-height:1.45; }
   .k-product { border-color:#0F7A5C; background:#EFF8F3; } .k-core { border-color:#2F4AC0; background:#EEF2FB; }
   .k-security { border-color:#C2410C; background:#FBEEE9; } .k-feature { border-color:#B45309; background:#FDF6E8; }
   .k-infra { border-color:#595959; background:#F1F1F1; } .k-ops, .k-docs { border-color:#9a9a96; background:#F7F7F5; }
   .node.sel { box-shadow:0 0 0 4px #F7B32B; }
-  .badge { position:absolute; top:-10px; right:-8px; background:#1F2433; color:#fff; font-size:10px; border-radius:10px; padding:1px 7px; border:2px solid #fff; display:none; }
-  .alert { position:absolute; top:-10px; left:8px; font-size:9.5px; color:#fff; font-weight:700; border-radius:8px; padding:1px 7px; border:2px solid #fff; display:none; }
-  body[data-lens="changes"] .badge, body[data-lens="changes"] .alert { display:block; }
+  .badge { position:absolute; top:-10px; right:-8px; background:#1F2433; color:#fff; font-size:10px; border-radius:10px; padding:1px 7px; border:2px solid #fff; }
+  .alert { position:absolute; top:-10px; left:8px; font-size:9.5px; color:#fff; font-weight:700; border-radius:8px; padding:1px 7px; border:2px solid #fff; }
   .a-security { background:#C2410C; } .a-blocked { background:#B45309; }
-  body[data-lens="runtime"] .node { border-color:#C9C9C4 !important; background:#fff !important; }
-  body[data-lens="heat"] .node .m { display:block; }
-  body[data-lens="heat"] .node { border-color:#C9C9C4 !important; background:var(--heat, #fff) !important; }
+  body[data-metric="heat"] .node { border-color:#C9C9C4 !important; background:var(--heat, #fff) !important; }
   #heatnote { font-size:11.5px; color:#8A8A8A; margin:4px 2px 8px; display:none; }
-  body[data-lens="heat"] #heatnote { display:block; }
+  body[data-metric="heat"] #heatnote { display:block; }
   .h-ok { box-shadow:0 0 0 4px rgba(18,161,80,.18) !important; border-color:#12A150 !important; }
   .h-warn { box-shadow:0 0 0 4px rgba(232,162,0,.25) !important; border-color:#E8A200 !important; }
   .h-bad { box-shadow:0 0 0 5px rgba(215,38,61,.28) !important; border-color:#D7263D !important; }
   /* Not knowing has to look different from being well: dashed and dimmed, never green. */
   .h-unknown { border-style:dashed !important; border-color:#9AA0AC !important; opacity:.7; }
   #rtnote { font-size:11.5px; color:#8A8A8A; margin:4px 2px 8px; display:none; }
-  body[data-lens="runtime"] #rtnote { display:block; }
+  body[data-metric="health"] #rtnote { display:block; }
   /* panel */
   #panel { width:420px; flex-shrink:0; background:#fff; border:1px solid #DDD; border-radius:12px; display:flex; flex-direction:column; max-height:calc(100vh - 100px); }
   .phead { padding:12px 16px; border-bottom:1px solid #EEE; }
@@ -87,11 +89,7 @@
   .ghost { background:none; border:0; color:#2F4AC0; font-size:11.5px; cursor:pointer; padding:0; }
   a { color:#2F4AC0; }
   #systemflow { display:none; }
-  body[data-lens="flow"] #systemflow { display:block; }
-  body[data-lens="flow"] #lanes { display:none; }
   #recordview { display:none; padding:14px 18px; font-size:13px; }
-  body[data-lens="record"] #recordview { display:block; }
-  body[data-lens="record"] #lanes { display:none; }
   #recordview .rec { border-bottom:1px solid #E4E4DF; padding:7px 0; }
   #recordview .who { color:#6b7180; font-size:12px; }
   #systemflow h3 { font-size:13px; margin:0 0 6px; }
@@ -102,22 +100,22 @@
   #systemflow .dg { overflow:auto; margin-top:8px; }
   #systemflow .dg svg { max-width:100%; height:auto; }
   #systemflow pre { white-space:pre-wrap; font-size:11px; }
-</style></head><body data-lens="changes">
+</style></head><body data-metric="health">
 <header>
   <h1><span id="htitle">mission control</span><a class="brand" href="https://github.com/tapaskar/archwhere" target="_blank" rel="noopener noreferrer">archwhere</a></h1>
-  <div class="lens">
-    <button data-l="structure">Structure</button>
-    <button data-l="changes" class="on">Changes 💬</button>
-    <button data-l="heat">Heat 🔥</button>
-    <button data-l="runtime">Runtime ●</button>
-    <button data-l="flow">System flow</button>
-    <button data-l="record">Record</button>
+  <div class="lens" role="group" aria-label="What the cards show">
+    <button data-m="health" class="on" aria-pressed="true">Health</button>
+    <button data-m="heat" aria-pressed="false">Heat</button>
   </div>
   <span id="meta">loading…</span>
 </header>
 <div class="wrap">
   <div id="rail"><h2>NEEDS YOUR ATTENTION</h2><div id="railbody">loading…</div></div>
-  <div id="map"><div id="rtnote"></div><div id="heatnote"></div><div id="lanes"></div><div id="systemflow"></div><div id="recordview"></div></div>
+  <div id="map">
+    <div id="rtnote"></div><div id="heatnote"></div><div id="lanes"></div>
+    <details id="dflow" class="drawer"><summary>System flow</summary><div id="systemflow"></div></details>
+    <details id="drecord" class="drawer"><summary>Record</summary><div id="recordview"></div></details>
+  </div>
   <div id="panel">
     <div class="phead"><div class="crumb" id="pcrumb">Select a component or a rail item</div><div class="title" id="ptitle">—</div></div>
     <div id="plist"></div>
@@ -147,14 +145,31 @@ async function j(url, opts) {
   return d;
 }
 
-function lens() { return document.body.dataset.lens; }
+/** What the cards are showing: live health, or change heat. Kept on the body so CSS can read it. */
+function metric() { return document.body.dataset.metric; }
+
 document.querySelectorAll('.lens button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.lens button').forEach(x => x.classList.toggle('on', x === b));
-  document.body.dataset.lens = b.dataset.l;
-  if (b.dataset.l === 'runtime') refreshRuntime();
-  if (b.dataset.l === 'heat') refreshHeat();
-  if (b.dataset.l === 'record') showRecord().catch(e => { $('#recordview').textContent = 'Could not read the record: ' + e.message; });
-  if (b.dataset.l === 'flow') showSystemFlow().catch(e => { $('#systemflow').textContent = 'Could not load the system flow: ' + e.message; });
+  document.querySelectorAll('.lens button').forEach(x => {
+    const on = x === b;
+    x.classList.toggle('on', on);
+    x.setAttribute('aria-pressed', String(on));
+  });
+  document.body.dataset.metric = b.dataset.m;
+  if (b.dataset.m === 'health') refreshRuntime();
+  if (b.dataset.m === 'heat') refreshHeat();
+});
+
+// Both drawers hold something costly to build, so each is fetched the first time it is opened
+// and then left alone. Mermaid in particular is only loaded if the system flow is ever wanted.
+$('#drecord').addEventListener('toggle', function () {
+  if (!this.open || this.dataset.loaded) return;
+  this.dataset.loaded = '1';
+  showRecord().catch(e => { $('#recordview').textContent = 'Could not read the record: ' + e.message; });
+});
+$('#dflow').addEventListener('toggle', function () {
+  if (!this.open || this.dataset.loaded) return;
+  this.dataset.loaded = '1';
+  showSystemFlow().catch(e => { $('#systemflow').textContent = 'Could not load the system flow: ' + e.message; });
 });
 
 // ---- Record lens: read-only. Record text comes from agents, so it only ever goes in as textContent.
@@ -569,7 +584,7 @@ async function refreshHeat() {
   setInterval(() => {
     if (sel.thread && (sel.mode === 'issue' || sel.mode === 'pr') && !document.hidden) openIssue(sel.thread, { keep: true }).catch(() => {});
   }, 10000);
-  setInterval(() => { if (lens() === 'runtime') refreshRuntime(); }, 30000);
+  setInterval(() => { if (metric() === 'health') refreshRuntime(); }, 30000);
 })();
 </script>
 </body></html>
