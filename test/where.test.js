@@ -166,3 +166,29 @@ test('no catch in lib/ is completely empty', () => {
   }
   assert.deepStrictEqual(empty, []);
 });
+
+// The record is written by agents with self-declared identity, and findings and specs can carry
+// anything they typed. The panel that shows them sits in the page holding the Merge button, so
+// every value must go in escaped and every entry must say who declared it.
+test('the record panel escapes everything and never implies proven identity', () => {
+  const html = require('fs').readFileSync(path.join(__dirname, '..', 'ui', 'mission.html'), 'utf8');
+  const fn = html.match(/function recordPanel\(d\)[\s\S]*?\n\}/);
+  assert.ok(fn, 'recordPanel present');
+  const src = fn[0];
+
+  // Record values reach the DOM only through esc().
+  for (const field of ['f.title', 'sp.name', 'c.body', 'd.provenance.from']) {
+    assert.match(src, new RegExp('esc\\(' + field.replace(/\./g, '\\.')), field + ' must be escaped');
+  }
+  assert.doesNotMatch(src, /\+\s*(?:f|sp|c)\.(?:title|name|body|author)\b/,
+    'a record value is concatenated without esc()');
+
+  // Attribution is shown, and labelled as a declaration rather than a fact.
+  assert.match(src, /declared/);
+  // Corrected findings are marked, not hidden.
+  assert.match(src, /f\.corrected/);
+  // The panel says which record it read, so an empty one is not read as proof of absence.
+  assert.match(src, /provenance/);
+  // A record that does not verify shows nothing derived.
+  assert.match(src, /if \(!d\.ok\)/);
+});
