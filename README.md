@@ -9,9 +9,9 @@ becomes the place you **talk to your agents**.
 
 ![mission control](https://raw.githubusercontent.com/tapaskar/archwhere/main/docs/img/mission.png)
 
-*Mission control on a fictional product: the attention rail (security → blocked →
-needs-attention → ready-to-merge), the component map with live badges, and a
-thread pinned to a component — answered by a coding agent, with its PR.*
+*Mission control on Meridian, the fictional product in `examples/`: failing components
+at the top of the attention rail, the work strip, and the map graded by live health.
+One surface — no tabs. The health figures come from an example runtime endpoint.*
 
 Zero dependencies. One JSON file. Works with Claude, or any agent that can see GitHub.
 
