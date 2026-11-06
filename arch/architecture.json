@@ -44,7 +44,8 @@
         "lib/record-cli.js",
         "lib/claims.js",
         "lib/signoff.js",
-        "lib/review.js"
+        "lib/review.js",
+        "lib/component-view.js"
       ],
       "deps": [
         "core",
