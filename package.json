@@ -1,6 +1,6 @@
 {
   "name": "archwhere",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Put your AI coding agents' work on the architecture map: declared components, PR-to-component mapping, and a mission-control UI where you talk to agents on the diagram.",
   "license": "MIT",
   "author": "Tapas Kar",
