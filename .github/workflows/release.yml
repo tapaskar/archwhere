@@ -1,0 +1,59 @@
+name: release
+
+# Publishes to npm when a version tag is pushed, using OIDC trusted publishing: GitHub mints a
+# short-lived identity token for this exact workflow and npm checks it against the trusted
+# publisher configured on the package. No token is stored anywhere — not in a secret, not in a
+# .npmrc, not on the owner's machine. A login that keeps expiring is what this replaces.
+#
+# One-time setup on npmjs.com (the package must already exist, which it does):
+#   npmjs.com -> archwhere -> Settings -> Trusted publisher -> GitHub Actions
+#     organization/user: tapaskar
+#     repository:        archwhere
+#     workflow filename: release.yml
+#
+# Then publishing is: npm version patch && git push --follow-tags origin main
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:        # so a failed run can be retried without moving the tag
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest          # trusted publishing requires a GitHub-hosted runner
+    permissions:
+      contents: read
+      id-token: write               # without this there is no OIDC token and npm falls back to
+                                    # looking for a password, which reads as a 404 on publish
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # setup-node pins an npm that predates trusted publishing. Upgrade before publishing.
+      - name: Use an npm that can do trusted publishing
+        run: |
+          npm install -g npm@latest
+          npm --version
+
+      # The tag is the release, so refuse to publish if it disagrees with package.json rather
+      # than quietly shipping a version nobody asked for.
+      - name: The tag must match the version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG="$(node -p 'require("./package.json").version')"
+          echo "tag $TAG, package.json $PKG"
+          test "$TAG" = "$PKG"
+
+      # prepublishOnly runs the suite again, but a red build should not reach the publish step.
+      - run: npm test
+      - run: node bin/archwhere.js check
+
+      - name: Publish
+        run: npm publish --provenance --access public
