@@ -249,3 +249,56 @@ test('a reviewer who approves then asks for changes has not approved', () => {
   const stale = out.reviews.find(r => r.hash === 'r1');
   assert.ok(stale.why.some(w => /superseded/.test(w)), 'says why it no longer counts');
 });
+
+// Three gaps Kiro raised on #17, each reproduced before being closed.
+test('only the holder can move their own claim', () => {
+  // The write path checks this, but the fold is what a reader trusts — and an imported segment
+  // can carry an update nobody authorised.
+  const base = { task: 'T1', role: 'builder', claim_id: 'c1', expires_at: '2026-11-07T00:00:00Z' };
+  const entries = [
+    { type: 'claim', hash: 'h1', ts: '2026-11-06T00:00:00Z', ...base,
+      author: 'dana', agent: 'a1', model: 'gpt-5', vendor: 'openai' },
+    { type: 'claim-update', hash: 'h2', ts: '2026-11-06T00:10:00Z', claim_id: 'c1', status: 'released',
+      author: 'mallory', agent: 'a2', model: 'claude-opus-5', vendor: 'anthropic' },
+  ];
+  const f = C.foldClaims(entries, Date.parse('2026-11-06T00:20:00Z'));
+  assert.strictEqual(f.all[0].status, 'active', 'a stranger cannot release it');
+  assert.deepStrictEqual(f.all[0].rejected, [{ entry: 'h2', why: 'not the holder' }]);
+});
+
+test('the holder can still release and renew', () => {
+  const who = { author: 'dana', agent: 'a1', model: 'gpt-5', vendor: 'openai' };
+  const entries = [
+    { type: 'claim', hash: 'h1', ts: '2026-11-06T00:00:00Z', task: 'T1', role: 'builder',
+      claim_id: 'c1', expires_at: '2026-11-06T01:00:00Z', ...who },
+    { type: 'claim-update', hash: 'h2', ts: '2026-11-06T00:10:00Z', claim_id: 'c1', status: 'released', ...who },
+  ];
+  assert.strictEqual(C.foldClaims(entries, Date.parse('2026-11-06T00:20:00Z')).all[0].status, 'released');
+});
+
+test('a renewal cannot reach further than one ttl past when it was written', () => {
+  // Otherwise an entry grants itself a claim lasting years, and no reader would notice.
+  const who = { author: 'dana', agent: 'a1', model: 'gpt-5', vendor: 'openai' };
+  const entries = [
+    { type: 'claim', hash: 'h1', ts: '2026-11-06T00:00:00Z', task: 'T1', role: 'builder',
+      claim_id: 'c1', expires_at: '2026-11-06T01:00:00Z', ...who },
+    { type: 'claim-update', hash: 'h2', ts: '2026-11-06T00:10:00Z', claim_id: 'c1',
+      expires_at: '2027-11-06T00:00:00Z', ...who },
+  ];
+  const f = C.foldClaims(entries, Date.parse('2026-11-06T02:00:00Z'));
+  assert.strictEqual(f.all[0].status, 'expired', 'the year-long renewal was refused');
+  assert.deepStrictEqual(f.all[0].rejected, [{ entry: 'h2', why: 'renewal beyond the maximum ttl' }]);
+});
+
+test('a renewal within the cap is honoured', () => {
+  const who = { author: 'dana', agent: 'a1', model: 'gpt-5', vendor: 'openai' };
+  const entries = [
+    { type: 'claim', hash: 'h1', ts: '2026-11-06T00:00:00Z', task: 'T1', role: 'builder',
+      claim_id: 'c1', expires_at: '2026-11-06T01:00:00Z', ...who },
+    { type: 'claim-update', hash: 'h2', ts: '2026-11-06T00:10:00Z', claim_id: 'c1',
+      expires_at: '2026-11-06T03:00:00Z', ...who },
+  ];
+  const f = C.foldClaims(entries, Date.parse('2026-11-06T02:00:00Z'));
+  assert.strictEqual(f.all[0].status, 'active');
+  assert.ok(!f.all[0].rejected);
+});

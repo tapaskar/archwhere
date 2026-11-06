@@ -452,3 +452,30 @@ test('identity: flags beat env, and missing parts are named', () => {
   assert.throws(() => R.identityFrom({ author: 'x' }, {}, os.tmpdir()), /agent, model, vendor/);
   assert.strictEqual(R.identityFrom({ human: true, author: 'x' }, {}).actor, 'human');
 });
+
+// Secret shapes Kiro listed as missing on #18. The gate is pattern matching and will never be
+// complete — RECORD.md says so — but these are common enough to be worth naming.
+test('the secret gate catches the shapes it used to miss', () => {
+  const cases = [
+    ['Stripe key',    'key is sk_live_51Habcdefghijklmnop'],
+    ['JWT',           'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r'],
+    ['npm token',     'npm_abcdefghijklmnopqrstuvwxyz0123456789'],
+    ['credential in a URL', 'postgres://admin:hunter2@db.internal:5432/app'],
+    ['password assignment', 'password = correcthorsebattery'],
+    ['key body without its header', 'MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQ'],
+  ];
+  for (const [name, text] of cases) {
+    assert.throws(() => R.refuseSecrets({ title: 't', body: text }),
+      e => e.code === 'secret' && new RegExp(name).test(e.message),
+      name + ' should be refused');
+  }
+});
+
+test('the secret gate does not cry wolf on ordinary long text', () => {
+  // A gate with false positives is worse than one with gaps: people route around it. A bare run
+  // of base64 characters is not evidence of a key, which is why only the DER prefix is matched.
+  for (const ok of ['x'.repeat(5000), 'a'.repeat(300) + '==', 'see the token in the vault',
+                    'the password policy is documented', 'https://github.com/tapaskar/archwhere']) {
+    assert.doesNotThrow(() => R.refuseSecrets({ title: 't', body: ok }), JSON.stringify(ok.slice(0, 40)));
+  }
+});
