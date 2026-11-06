@@ -51,6 +51,7 @@ npx archwhere doc --out ARCHITECTURE.md
 npx archwhere mission            # the UI at http://localhost:4610
 npx archwhere mcp                # MCP server on stdio; read-only unless --write
 npx archwhere record verify      # check the shared record's hash chain
+npx archwhere collide --refs a,b # which branches in flight will fight each other
 ```
 
 ## The map heals itself
@@ -125,12 +126,76 @@ flowchart LR
 - **Six lenses** — Structure / Changes / Heat / Runtime / System flow / Record.
   **Heat** colours components by git churn over the last 30 days — where your
   agents are actually spending effort. **Runtime** colours them by live health
-  from any endpoint you point `RUNTIME_URL` at, returning
-  `{"components": {"<id>": {"status": "ok|warn|bad", "lines": ["…"]}}}`.
+  from any endpoint you point `RUNTIME_URL` at (see below).
   **System flow** draws the Mermaid system map, with components that have an open
   PR highlighted, and every process flow in your model as a sequence diagram.
   It fetches Mermaid 11 from jsDelivr when opened, pinned by hash.
   **Record** shows, read-only, whether the [shared record](docs/RECORD.md) verifies, active claims and the latest entries.
+
+### The runtime contract
+
+Point `RUNTIME_URL` at anything that answers this shape. It is deliberately dumb,
+so you can satisfy it from Prometheus, Datadog, pm2 or a shell script, and
+archwhere never learns to speak a vendor's API.
+
+```json
+{"components": {"<id>": {
+  "status": "ok|warn|bad|unknown",
+  "deploy": {"at": "2026-11-06T07:00:00Z", "ref": "PR #221"},
+  "signals": {"traffic": {"value": 1840, "unit": "req/h"},
+              "errors":  {"value": 212, "of": 1840},
+              "latency": {"p99_ms": 4800}},
+  "failures": [{"name": "restarts", "count": 24522, "window": "9h", "severity": "bad"}],
+  "lines": ["pm2 online", "up 9 h"],
+  "links": [{"label": "errors", "url": "https://obs.example/errors"}]
+}}}
+```
+
+Only `status` is required, and the older `{status, lines}` shape still works. Two
+rules are enforced rather than suggested:
+
+- **Errors need `of`.** A count with no denominator is not a signal: 212 failures
+  out of 300 is an outage, 212 out of two million is noise. A count without a
+  denominator is shown, never graded.
+- **Unknown is not ok.** A component reporting a status archwhere does not
+  recognise, or whose reading is over two minutes old, renders as `unknown` —
+  dashed and dimmed, never green. Silence looking like health is how a dead
+  service goes unnoticed.
+
+Grading lives in one tested place (`lib/signals.js`): the worst of the stated
+status, the error rate against traffic, and any declared failure severity. Bands
+are per component, so a chatty service and a quiet one are not held to one number.
+
+### Collisions: what GitHub does not tell you
+
+GitHub computes a pull request against its base. When several agents work at once
+the expensive conflict is pull request against pull request, and nothing reports
+it until the second merge.
+
+```bash
+npx archwhere collide --refs feat/a,feat/b,fix/c --base main
+```
+
+```
+against main:
+  ✗ feat/a  conflicts in docs, mission
+  ✓ fix/c clean
+
+against each other:
+  ✗ feat/a  ×  feat/b
+      components: docs
+      both change: CHANGELOG.md, README.md
+
+merge order (least entangled first):
+  fix/c  (collides with nothing)
+```
+
+`git merge-tree` merges in memory: no working tree, no network, no GitHub API, so
+it is cheap enough to run on every page load. Conflicts are reported in
+**components**, not only paths. A branch behind base conflicts with every branch
+that is current, which says nothing about those two — so the matrix reports file
+overlap since base beside the merge result, names the stale branches, and ranks
+the merge order on genuine overlap only.
 
 ### Bring your own coding agent
 
