@@ -13,6 +13,7 @@ archwhere — which architecture component does this change touch?
   archwhere [map] [--base REF] [--format text|md|mermaid|html]   map a diff
   archwhere doc  [--out ARCHITECTURE.md]                         full map doc
   archwhere check [--fix]                                        model sanity (CI-friendly); --fix adopts unmapped files
+  archwhere collide --refs a,b,c [--base main] [--json]              which branches in flight will fight each other
   archwhere heat [--days 30]                                     change heat per component from git history
   archwhere ir   [--out arch/build]                              Archify IR diagrams
   archwhere mission [--port 4610]                                mission-control UI
@@ -115,6 +116,46 @@ function main() {
       process.exit(1);
     }
     console.log(`✓ model ok: ${Object.keys(arch.components).length} components, ${Object.keys(arch.flows || {}).length} flows, every tracked file mapped`);
+    return;
+  }
+
+  if (cmd === 'collide') {
+    const CO = require('../lib/collide');
+    const base = arg(args, '--base') || 'main';
+    const refs = (arg(args, '--refs') || '').split(',').map(r => r.trim()).filter(Boolean);
+    if (!refs.length) {
+      console.error('collide needs --refs a,b,c (branch names), optionally --base main');
+      process.exit(2);
+    }
+    let m;
+    try { m = CO.matrix(root, arch, refs, { base }); }
+    catch (e) { console.error(e.message); process.exit(2); }
+    if (args.includes('--json')) { console.log(JSON.stringify(m, null, 2)); return; }
+
+    const short = r => r.replace(/^(origin|refs\/heads)\//, '');
+    console.log('against ' + base + ':');
+    for (const v of m.vsBase) {
+      console.log('  ' + (v.clean ? '\u2713 ' : '\u2717 ') + short(v.ref)
+        + (v.clean ? ' clean' : '  conflicts in ' + (v.components.join(', ') || v.files.join(', '))));
+    }
+    if (m.stale.length) {
+      console.log('\n' + m.stale.map(short).join(', ') + ' ' + (m.stale.length > 1 ? 'are' : 'is')
+        + ' behind ' + base + '. Rebase first: until then they appear to collide with every'
+        + '\ncurrent branch, which says nothing about those branches.');
+    }
+    const real = m.pairs.filter(p => p.overlap.length);
+    console.log('\nagainst each other:' + (real.length ? '' : ' no branch changes a file another one changes'));
+    for (const p of real) {
+      console.log('  \u2717 ' + short(p.a) + '  \u00d7  ' + short(p.b)
+        + (p.clean ? '  (same files, merges cleanly for now)' : ''));
+      if (p.overlapComponents.length) console.log('      components: ' + p.overlapComponents.join(', '));
+      console.log('      both change: ' + p.overlap.join(', '));
+    }
+    console.log('\nmerge order (least entangled first):');
+    for (const o of m.order) {
+      console.log('  ' + short(o.ref) + (o.collides ? '  (collides with ' + o.collides + ')' : '  (collides with nothing)'));
+    }
+    if (real.length || m.stale.length) process.exit(1);
     return;
   }
 

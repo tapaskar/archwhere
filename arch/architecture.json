@@ -18,7 +18,8 @@
       "paths": [
         "lib/where.js",
         "bin/**",
-        "lib/infer.js"
+        "lib/infer.js",
+        "lib/collide.js"
       ],
       "deps": []
     },
