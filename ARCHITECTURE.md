@@ -51,7 +51,7 @@ flowchart LR
 | **Archify compiler** | feature |  | Model → Archify IR. | `lib/archify.js` |
 | **Action & listeners** | infra | GitHub Actions | GitHub Action, consumer workflow templates, agent skill. | `action.yml` `templates/**` `SKILL.md` |
 | **Examples** | docs |  | Meridian fictional model. | `examples/**` |
-| **Ops & tests** | ops |  | CI and the test suite. | `.github/**` `test/**` `package.json` `package-lock.json` `.gitignore` `arch/**` |
+| **Ops & tests** | ops |  | CI and the test suite. | `.github/**` `test/**` `package.json` `package-lock.json` `.gitignore` `.gitattributes` `arch/**` |
 | **Docs** | docs |  | README, license, images. | `*.md` `LICENSE` `docs/**` |
 
 ## Process flows (dynamic views)
