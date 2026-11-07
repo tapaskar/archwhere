@@ -423,6 +423,24 @@ archwhere is open source (MIT) and also puts the work on an architecture map.
 From stranger to agent-replies-on-the-map in under twenty minutes — the full
 funnel, stage by stage: [docs/ONBOARDING.md](https://github.com/tapaskar/archwhere/blob/main/docs/ONBOARDING.md).
 
+## Releasing
+
+Push a version tag; `.github/workflows/release.yml` publishes it.
+
+```bash
+npm version patch          # or minor / major — this also makes the tag
+git push --follow-tags origin main
+```
+
+The workflow uses npm **trusted publishing**: GitHub mints a short-lived identity token for that
+one workflow and npm checks it against the trusted publisher on the package. No token is stored —
+not in a repository secret, not in a `.npmrc`, not on anyone's machine. It refuses to publish if
+the tag and `package.json` disagree, and runs the suite and `archwhere check` first.
+
+One-time setup, on npmjs.com → the package → **Settings → Trusted publisher → GitHub Actions**:
+organization `tapaskar`, repository `archwhere`, workflow `release.yml`. The package has to exist
+already, which it does.
+
 ## License
 
 MIT © Tapas Kar. Built with and for AI coding agents — this repo's own model
