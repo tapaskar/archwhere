@@ -5,8 +5,8 @@ description: Maintain a declared architecture map and place every code change on
 
 # archwhere — the agent's side of the contract
 
-archwhere is not on npm. If the command is missing, use `npx github:tapaskar/archwhere` in its
-place, or install it with `npm install -g github:tapaskar/archwhere`.
+If the `archwhere` command is missing, run it with `npx archwhere`, or install it with
+`npm install -g archwhere`.
 
 The humans supervising you read the architecture map, not your diffs. Your job
 is to keep the map honest and to place your work on it.

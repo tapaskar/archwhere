@@ -5,7 +5,7 @@
 | Stage | Who | Time | What happens |
 |---|---|---|---|
 | **Discover** | human | min 0 | Launch post / Actions marketplace → README hero + live demo |
-| **Try** | human | 1–2 min | `npx github:tapaskar/archwhere init` → starter model, 3 workflows, printed agent prompt |
+| **Try** | human | 1–2 min | `npx archwhere init` → starter model, 3 workflows, printed agent prompt |
 | **Map** | *their agent* | 2–15 min | Paste the prompt; the agent surveys the repo, writes the real `architecture.json` + flows, iterates until `archwhere check` is green, commits with `ARCHITECTURE.md` |
 | **First signal** | GitHub | next PR | The Action comments the impact table + highlighted map — the "aha" moment, zero extra config |
 | **Operate** | human | daily | `archwhere mission` — attention rail, lenses, threads |
