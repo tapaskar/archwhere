@@ -58,21 +58,21 @@ that had them. An unsupported version gets `-32022`, as the specification says.
 ## Setup
 
 Read-only first. To write, add `--write --author NAME --agent NAME --model MODEL --vendor VENDOR` to the arguments.
-The package isn't on the npm registry yet, so the examples run it from GitHub with `npx -y github:tapaskar/archwhere`.
-The first run downloads it, which can outlast a client's connect timeout: `node /path/to/archwhere/bin/archwhere.js mcp`
-from a checkout avoids that, and pins what you run.
+The examples run it from the npm registry with `npx -y archwhere`. The first run downloads it, which can outlast a
+client's connect timeout: `node /path/to/archwhere/bin/archwhere.js mcp` from a checkout avoids that, and pins what
+you run. `npx -y archwhere@1.0.5` pins the version without a checkout.
 Each agent should have its own identity, or claims can't tell agents apart.
 
 ### Claude Code
 
 ```bash
-claude mcp add --transport stdio archwhere -- npx -y github:tapaskar/archwhere mcp
+claude mcp add --transport stdio archwhere -- npx -y archwhere mcp
 ```
 
 Or in `.mcp.json` at the repo root:
 
 ```json
-{ "mcpServers": { "archwhere": { "command": "npx", "args": ["-y", "github:tapaskar/archwhere", "mcp"] } } }
+{ "mcpServers": { "archwhere": { "command": "npx", "args": ["-y", "archwhere", "mcp"] } } }
 ```
 
 Tested: Claude Code 2.1.318 connected, listed the tools and called `get_map`, both on protocol 2026-07-28 and with
@@ -83,7 +83,7 @@ Tested: Claude Code 2.1.318 connected, listed the tools and called `get_map`, bo
 `.kiro/settings/mcp.json` in the workspace, or `~/.kiro/settings/mcp.json`:
 
 ```json
-{ "mcpServers": { "archwhere": { "command": "npx", "args": ["-y", "github:tapaskar/archwhere", "mcp"] } } }
+{ "mcpServers": { "archwhere": { "command": "npx", "args": ["-y", "archwhere", "mcp"] } } }
 ```
 
 Tested: kiro-cli 2.28.0 connected over the `initialize` handshake (protocol 2025-11-25) and called `get_map`. Tested from
@@ -98,7 +98,7 @@ is a different thing: it allows no MCP.
 mcp_servers:
   archwhere:
     command: npx
-    args: ["-y", "github:tapaskar/archwhere", "mcp", "--root", "/path/to/repo"]
+    args: ["-y", "archwhere", "mcp", "--root", "/path/to/repo"]
     env:
       GITHUB_TOKEN: "..."
 ```

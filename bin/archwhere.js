@@ -315,8 +315,8 @@ Next — let your coding agent write the real model. Paste this to it:
   name, kind (core/security/feature/infra/product/ops/docs), description,
   the file globs it owns, deps, and watch patterns for review-sensitive code.
   Add 2–3 "flows" for the main user journeys. Every tracked file must map to
-  a component ("npx github:tapaskar/archwhere check" must pass). Then run
-  "npx github:tapaskar/archwhere doc --out ARCHITECTURE.md" and commit both.
+  a component ("npx archwhere check" must pass). Then run
+  "npx archwhere doc --out ARCHITECTURE.md" and commit both.
 `);
 }
 
